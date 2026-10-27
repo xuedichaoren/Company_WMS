@@ -1,27 +1,41 @@
-/**app.wxss**/
-.container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  box-sizing: border-box;
-} 
-
-button {
-  background: initial;
-}
-
-button:focus{
-  outline: 0;
-}
-
-button::after{
-  border: none;
-}
-
+/* app.wxss —— 全局样式与主题变量 */
 
 page {
-  background: #f6f6f6;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
+  /* 主题变量：后续页面统一通过 var() 引用，便于整体换肤 */
+  --color-primary: #2f6bff;
+  --color-success: #16a34a;
+  --color-warning: #f97316;
+  --color-danger: #ef4444;
+  --color-text: #1f2430;
+  --color-text-secondary: #8a93a6;
+  --color-text-muted: #9aa3b5;
+  --color-bg: #f4f6fb;
+  --color-card: #ffffff;
+  --radius-card: 24rpx;
+
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica,
+    'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 28rpx;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 统一使用 border-box，避免 padding 撑破布局 */
+view,
+text {
+  box-sizing: border-box;
+}
+
+/* 去除 button 默认样式，方便后续自定义按钮 */
+button {
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  line-height: inherit;
+  border-radius: 0;
+}
+
+button::after {
+  border: none;
 }

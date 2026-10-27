@@ -1,6 +1,9 @@
 {
-  "navigationBarTitleText": "基础能力",
-  "usingComponents": {
-    "cloud-tip-modal": "/components/cloudTipModal/index"
-  }
+  "navigationBarTitleText": "仓储管理",
+  "navigationBarBackgroundColor": "#2f6bff",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#f4f6fb",
+  "backgroundTextStyle": "dark",
+  "enablePullDownRefresh": true,
+  "usingComponents": {}
 }

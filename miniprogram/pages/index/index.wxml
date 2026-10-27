@@ -1,29 +1,109 @@
-<!--index.wxml-->
-<view class="container">
-  <view class="title">快速了解云开发</view>
-  <view class="top_tip">免鉴权接口调用 免部署后台 高并发</view>
-  <view class="power" wx:key="title" wx:for="{{powerList}}" wx:for-item="power">
-    <view class="power_info" data-index="{{index}}" data-type="{{ power.type }}" bindtap="onClickPowerInfo">
-      <view class="power_info_text">
-        <view class="power_info_text_title">
-          {{power.title}}
-          <view class="power_info_text_tag" wx:if="{{power.tag}}">{{power.tag}}</view>
+<!-- 首页：仓库概览 / 快捷操作 / 最近操作记录 -->
+<view class="page">
+  <!-- ==================== 顶部概览区 ==================== -->
+  <view class="hero">
+    <!-- 问候语、仓库信息与扫码入口 -->
+    <view class="hero__top">
+      <view class="hero__user">
+        <view class="hero__greeting">{{greeting}}，{{userName}}</view>
+        <view class="hero__warehouse">
+          {{overview.warehouseName}} · {{userRole}}
         </view>
-        <view class="power_info_text_tip">{{power.tip}}</view>
       </view>
-      <image wx:if="{{!power.showItem && power.item.length}}" class="power_info_more" src="../../images/arrow.svg"></image>
-      <image wx:if="{{power.showItem && power.item.length}}" class="power_info_less" src="../../images/arrow.svg"></image>
-      <image wx:if="{{!power.item.length}}" class="power_item_icon" src="../../images/arrow.svg"></image>
+
+      <view class="scan-btn" hover-class="scan-btn--hover" bindtap="handleScan">
+        <view class="scan-btn__icon">
+          <view class="scan-btn__line"></view>
+        </view>
+        <text class="scan-btn__text">扫一扫</text>
+      </view>
     </view>
-    <view wx:if="{{power.showItem}}">
-      <view wx:key="title" wx:for="{{power.item}}">
-        <view class="line"></view>
-        <view class="power_item" bindtap="jumpPage" data-type="{{ item.type }}" data-page="{{item.page}}">
-          <view class="power_item_title">{{item.title}}</view>
-          <image class="power_item_icon" src="../../images/arrow.svg"></image>
+
+    <view class="hero__date">{{dateText}}</view>
+
+    <!-- 数据概览：今日入库 / 今日出库 / 在库商品 / 库存预警 -->
+    <view class="stat-grid">
+      <view class="stat-card" wx:for="{{overview.stats}}" wx:key="key">
+        <view class="stat-card__label">{{item.label}}</view>
+        <view class="stat-card__value-wrap">
+          <text class="stat-card__value">{{item.value}}</text>
+          <text class="stat-card__unit">{{item.unit}}</text>
         </view>
       </view>
     </view>
   </view>
-  <cloud-tip-modal showTipProps="{{showTip}}" title="{{title}}" content="{{content}}"></cloud-tip-modal>
+
+  <!-- ==================== 快捷操作 ==================== -->
+  <view class="section">
+    <view class="section__header">
+      <text class="section__title">快捷操作</text>
+      <text class="section__hint">扫码即可快速录入</text>
+    </view>
+
+    <view class="action-grid">
+      <view
+        class="action-item"
+        wx:for="{{actions}}"
+        wx:key="key"
+        hover-class="action-item--hover"
+        data-key="{{item.key}}"
+        bindtap="handleActionTap"
+      >
+        <view class="action-item__icon" style="color: {{item.color}}; background: {{item.bg}};">
+          {{item.icon}}
+        </view>
+        <text class="action-item__label">{{item.label}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ==================== 最近操作 ==================== -->
+  <view class="section">
+    <view class="section__header">
+      <text class="section__title">最近操作</text>
+      <text class="section__more" data-key="log" bindtap="handleActionTap">
+        全部记录 ›
+      </text>
+    </view>
+
+    <view class="record-list">
+      <view
+        class="record"
+        wx:for="{{records}}"
+        wx:key="id"
+        hover-class="record--hover"
+        data-index="{{index}}"
+        bindtap="handleRecordTap"
+      >
+        <!-- 入库 / 出库类型标识 -->
+        <view
+          class="record__badge {{item.type === 'in' ? 'record__badge--in' : 'record__badge--out'}}"
+        >
+          {{item.typeText}}
+        </view>
+
+        <!-- 商品与操作信息 -->
+        <view class="record__main">
+          <view class="record__title">{{item.title}}</view>
+          <view class="record__meta">{{item.sku}} · {{item.spec}}</view>
+          <view class="record__meta">
+            {{item.time}} · {{item.operator}} · {{item.location}}
+          </view>
+        </view>
+
+        <!-- 数量：入库显示 +，出库显示 - -->
+        <view
+          class="record__qty {{item.type === 'in' ? 'record__qty--in' : 'record__qty--out'}}"
+        >
+          {{item.type === 'in' ? '+' : '-'}}{{item.quantity}}
+        </view>
+      </view>
+
+      <!-- 空状态 -->
+      <view wx:if="{{records.length === 0}}" class="empty">暂无操作记录</view>
+    </view>
+  </view>
+
+  <!-- 底部安全区，适配 iPhone 等全面屏机型 -->
+  <view class="safe-bottom"></view>
 </view>
