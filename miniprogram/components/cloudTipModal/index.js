@@ -1,7 +1,7 @@
 Component({
 
   /**
-   * 页面的初始数据
+   * 页面的初始数据1
    */
   data: {
     showTip: false,
