@@ -51,6 +51,7 @@ Wx_miniprogram/
 
 - **提示 `module 'xxx.js' is not defined`**：通常是新增文件后，开发者工具仍在使用旧的编译文件列表。执行「工具 → 清除缓存 → 全部清除」，然后重新编译。
 - **提示找不到旧页面（如 `pages/example/index`）**：说明工具仍在用旧项目的编译缓存。清除缓存，或关闭项目后重新导入 `E:\Wx_miniprogram`。
+- **JSON 报错 `Unexpected token` 且开头是一个看不见的字符**：文件被保存成了带 BOM 的 UTF-8。请将 `app.json` 等 JSON 文件另存为 **UTF-8（无 BOM）**；本项目的 JSON 文件都不要带 BOM。
 
 ## 首页功能
 
