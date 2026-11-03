@@ -685,6 +685,41 @@ function makeRecordId(type, createdAt, seq) {
 
 let state = null
 
+/**
+ * 数据变化订阅者
+ * 任何页面写库（改交付日期、报工、入库…）后都会通知订阅者，
+ * 让正在显示的数据页面立即重算，而不是等下一次 onShow
+ */
+const listeners = []
+
+/** 上一次写本地缓存是否失败：失败时内存数据才是最完整的一份 */
+let persistFailed = false
+
+/**
+ * 订阅数据变化
+ * @param {Function} handler 数据变化后的回调
+ * @returns {Function} 取消订阅
+ */
+function subscribe(handler) {
+  if (typeof handler !== 'function') return function () {}
+  listeners.push(handler)
+  return function unsubscribe() {
+    const index = listeners.indexOf(handler)
+    if (index !== -1) listeners.splice(index, 1)
+  }
+}
+
+/** 广播数据变化 */
+function notifyChange() {
+  listeners.slice().forEach((handler) => {
+    try {
+      handler()
+    } catch (err) {
+      console.warn('[WMS] 数据订阅回调出错', err)
+    }
+  })
+}
+
 /** 初始化种子商品时带上示例供应商（已显式写了 supplier 的保持不变） */
 function withSeedSupplier(goods) {
   return Object.assign({}, goods, {
@@ -817,9 +852,26 @@ function trimRecords(data) {
 function persist() {
   try {
     wx.setStorageSync(STORAGE_KEY, state)
+    persistFailed = false
   } catch (err) {
+    // 容量满或写入异常时保留内存数据，避免下一次回读把用户的改动覆盖掉
+    persistFailed = true
     console.warn('[WMS] 本地数据写入失败', err)
   }
+  // 写库成功与否都通知页面重算：内存里的 state 已经是最新的
+  notifyChange()
+}
+
+/**
+ * 强制按本地缓存重新加载一遍数据
+ * 页面 onShow 时调用，确保读到的是别的页面刚写进去的最新数据，
+ * 而不是本次启动时缓存下来的旧副本
+ * @returns {object} 最新的状态副本
+ */
+function reload() {
+  if (persistFailed && state) return clone(state)
+  state = null
+  return clone(loadState())
 }
 
 // ============================================================
@@ -2115,6 +2167,10 @@ function finishTask(taskId) {
 module.exports = {
   FALLBACK_CATEGORY,
   STOCK_STATUS_TEXT,
+  // 数据变化订阅（跨页同步）
+  subscribe,
+  notifyChange,
+  reload,
   // 分类
   listCategories,
   categoryNames,

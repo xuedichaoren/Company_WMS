@@ -99,11 +99,21 @@ Page({
 
   onLoad() {
     this.loadData()
+    // 任何页面改数据（如任务页改交付日期）都会通知首页重算，不必等返回
+    this.unsubscribeStore = store.subscribe(() => this.loadData())
   },
 
   onShow() {
-    // 从其他页面返回时刷新数据、问候语与日期，保证与最新操作同步
+    // 从其他页面返回时强制按本地缓存重新读一遍，再刷新问候语与日期
+    store.reload()
     this.loadData()
+  },
+
+  onUnload() {
+    if (this.unsubscribeStore) {
+      this.unsubscribeStore()
+      this.unsubscribeStore = null
+    }
   },
 
   /**
