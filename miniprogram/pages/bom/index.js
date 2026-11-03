@@ -18,7 +18,7 @@ Page({
     // 版本弹层
     showBomEditor: false,
     bomEditorTitle: '新增版本',
-    bomForm: { id: '', version: '', name: '', remark: '' },
+    bomForm: { id: '', version: '', name: '', price: '', remark: '' },
     // 物料弹层
     showItemEditor: false,
     itemGoods: null,
@@ -73,7 +73,7 @@ Page({
     this.setData({
       showBomEditor: true,
       bomEditorTitle: '新增版本',
-      bomForm: { id: '', version: '', name: '', remark: '' }
+      bomForm: { id: '', version: '', name: '', price: '', remark: '' }
     })
   },
 
@@ -87,6 +87,7 @@ Page({
         id: bom.id,
         version: bom.version,
         name: bom.name,
+        price: bom.price ? `${bom.price}` : '',
         remark: bom.remark
       }
     })
@@ -100,7 +101,10 @@ Page({
 
   handleBomFieldInput(e) {
     const { field } = e.currentTarget.dataset
-    this.setData({ [`bomForm.${field}`]: e.detail.value })
+    let value = e.detail.value
+    // 价格只允许数字与小数点，避免 type="digit" 之外的机型输入异常
+    if (field === 'price') value = String(value).replace(/[^\d.]/g, '')
+    this.setData({ [`bomForm.${field}`]: value })
   },
 
   handleBomSave() {
@@ -109,11 +113,16 @@ Page({
       wx.showToast({ title: '请填写版本号，如 V3.1', icon: 'none' })
       return
     }
+    if (!String(form.price).trim()) {
+      wx.showToast({ title: '请填写单台价格', icon: 'none' })
+      return
+    }
 
     const result = store.saveBom({
       id: form.id,
       version: form.version,
       name: form.name,
+      price: form.price,
       remark: form.remark
     })
     if (!result.ok) {

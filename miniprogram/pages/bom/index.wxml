@@ -33,6 +33,11 @@
     <view class="ver__meta">
       {{bom.itemCount}} 种物料 · 单台合计 {{bom.totalQty}} 个/件/套
     </view>
+    <view class="ver__price">
+      <text class="ver__price-value">{{bom.priceText}}</text>
+      <text class="ver__price-unit">/ 台</text>
+      <text class="ver__price-cost" wx:if="{{bom.cost}}">物料成本 {{bom.costText}}</text>
+    </view>
     <view class="ver__remark" wx:if="{{bom.remark}}">{{bom.remark}}</view>
 
     <view class="ver__actions">
@@ -131,6 +136,22 @@
         bindinput="handleBomFieldInput"
       />
     </view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">单台价格<text class="sheet__req">*</text></text>
+      <input
+        class="sheet__input"
+        type="digit"
+        value="{{bomForm.price}}"
+        placeholder="如 8600"
+        placeholder-class="sheet__placeholder"
+        data-field="price"
+        bindinput="handleBomFieldInput"
+      />
+      <text class="sheet__unit">元/台</text>
+    </view>
+
+    <view class="sheet__tips">生产任务总价 = 单台价格 × 计划台数，报价调整后新老任务都会按新价格重算</view>
 
     <view class="sheet__row">
       <text class="sheet__label">说明</text>

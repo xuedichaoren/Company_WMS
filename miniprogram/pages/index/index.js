@@ -98,6 +98,10 @@ Page({
     taskBoard: { tasks: [], total: 0, overdueCount: 0, shortCount: 0 },
     // 已维护的机型版本数量：为 0 时引导先去建 BOM，而不是直接下任务
     bomCount: 0,
+    // 长按任务卡：手动调整优先级弹层
+    showPriority: false,
+    priorityTask: {},
+    priorityList: [],
     // 快捷操作配置（静态，无需每次 setData）
     actions: ACTIONS
   },
@@ -316,6 +320,63 @@ Page({
 
     this.setData({ taskBoard: store.getTaskBoard() })
     wx.showToast({ title: `已调整为第 ${result.position} 位`, icon: 'none' })
+  },
+
+  /** 切换排序方式：交付日期 / 任务总价 / 下单时间 / 手动排序 */
+  handleSortModeTap(e) {
+    const { mode } = e.currentTarget.dataset
+    if (!mode || mode === this.data.taskBoard.sortMode) return
+
+    const result = store.setTaskSortMode(mode)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+
+    this.setData({ taskBoard: store.getTaskBoard() })
+    wx.showToast({ title: `已按${result.label}排序`, icon: 'none' })
+  },
+
+  /** 长按任务卡：打开优先级编号弹层 */
+  handleTaskLongPress(e) {
+    const { id } = e.currentTarget.dataset
+    const task = this.data.taskBoard.tasks.find((item) => item.id === id)
+    if (!task) return
+
+    // 只有一个任务时不用调顺序
+    if (this.data.taskBoard.total < 2) {
+      wx.showToast({ title: '只有一个任务，无需调整', icon: 'none' })
+      return
+    }
+
+    const list = []
+    for (let i = 1; i <= this.data.taskBoard.total; i += 1) list.push(i)
+
+    this.setData({ showPriority: true, priorityTask: task, priorityList: list })
+  },
+
+  /** 选中某个序号：把任务排到该位置 */
+  handlePriorityPick(e) {
+    const pos = Number(e.currentTarget.dataset.pos)
+    const task = this.data.priorityTask
+    if (!task || !task.id) return
+    if (pos === task.priority) {
+      this.closePriority()
+      return
+    }
+
+    const result = store.setTaskPriority(task.id, pos)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+
+    this.setData({ taskBoard: store.getTaskBoard(), showPriority: false })
+    wx.showToast({ title: `已调整为第 ${result.position} 位`, icon: 'none' })
+  },
+
+  closePriority() {
+    this.setData({ showPriority: false })
   },
 
   /**

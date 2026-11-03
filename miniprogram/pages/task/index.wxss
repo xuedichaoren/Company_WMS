@@ -652,3 +652,148 @@
 .tl__create {
   flex: 1;
 }
+
+/* ==================== 任务金额 ==================== */
+.task-card__amount {
+  margin-top: 18rpx;
+  padding: 18rpx 22rpx;
+  border-radius: 16rpx;
+  background: #f5f8ff;
+}
+
+.task-card__amount--empty {
+  background: #fff8ec;
+}
+
+.task-card__amount-main {
+  display: flex;
+  align-items: baseline;
+}
+
+.task-card__amount-label {
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+}
+
+.task-card__amount-value {
+  margin-left: auto;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.task-card__amount--empty .task-card__amount-value {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--color-warning);
+}
+
+.task-card__amount-meta {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  color: var(--color-text-muted);
+}
+
+/* 切换弹层里的任务金额 */
+.tl__amount {
+  margin-left: auto;
+  font-size: 22rpx;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.tl__meta-row .tl__del {
+  margin-left: 16rpx;
+}
+
+/* 切换弹层顶部排序说明 */
+.tl__sort {
+  padding: 4rpx 0 18rpx;
+  font-size: 21rpx;
+  color: var(--color-text-muted);
+}
+
+/* ==================== 收货信息 ==================== */
+.task-card__receiver {
+  margin-top: 18rpx;
+  padding: 18rpx 22rpx;
+  border-radius: 16rpx;
+  background: #f7f9fc;
+}
+
+.task-card__receiver--empty {
+  background: #fff8ec;
+}
+
+.task-card__receiver--hover {
+  opacity: 0.85;
+}
+
+.task-card__receiver-head {
+  display: flex;
+  align-items: center;
+}
+
+.task-card__receiver-label {
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+}
+
+.task-card__receiver-edit {
+  margin-left: auto;
+  font-size: 21rpx;
+  color: var(--color-primary);
+}
+
+.task-card__receiver-name {
+  display: flex;
+  align-items: baseline;
+  margin-top: 10rpx;
+}
+
+.task-card__receiver-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.task-card__receiver-phone {
+  margin-left: 14rpx;
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+}
+
+.task-card__receiver-addr {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.task-card__receiver-tip {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: var(--color-warning);
+}
+
+/* 弹层内分组小标题 */
+.sheet__sub {
+  margin: 26rpx 0 6rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+/* 切换弹层里的收货摘要：单行省略 */
+.tl__receiver {
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tl__receiver--empty {
+  color: var(--color-warning);
+}

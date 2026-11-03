@@ -61,6 +61,34 @@
   color: var(--color-text-muted);
 }
 
+/* 单台价格 */
+.ver__price {
+  display: flex;
+  align-items: baseline;
+  margin-top: 16rpx;
+  padding: 14rpx 20rpx;
+  border-radius: 14rpx;
+  background: #f5f8ff;
+}
+
+.ver__price-value {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.ver__price-unit {
+  margin-left: 6rpx;
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+}
+
+.ver__price-cost {
+  margin-left: auto;
+  font-size: 21rpx;
+  color: var(--color-text-muted);
+}
+
 .ver__actions {
   display: flex;
   margin-top: 24rpx;
@@ -219,4 +247,11 @@
   font-size: 26rpx;
   line-height: 1.6;
   color: var(--color-text);
+}
+
+/* 价格输入单位 */
+.sheet__unit {
+  margin-left: 10rpx;
+  font-size: 23rpx;
+  color: var(--color-text-muted);
 }

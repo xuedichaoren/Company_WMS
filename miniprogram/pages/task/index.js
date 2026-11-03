@@ -17,6 +17,14 @@ const FILTERS = [
   { key: 'ok', label: '充足' }
 ]
 
+/** 任务排序模式文案（与首页排序条一致） */
+const SORT_LABELS = {
+  due: '交付日期',
+  amount: '任务总价',
+  created: '下单时间',
+  manual: '手动排序'
+}
+
 /** 补一版展示字段，避免 WXML 里写过长的三元表达式 */
 function toViewItem(item) {
   let tagClass = 'tag--success'
@@ -83,6 +91,7 @@ Page({
     taskId: '',
     task: null,
     taskRank: 0,
+    sortLabel: '',
     analysis: null,
     summary: null,
     // 物料列表（已按筛选条件过滤）
@@ -104,6 +113,14 @@ Page({
     dueDate: '',
     todayText: '',
     remark: '',
+    // 新建任务时的收货信息（可先空着，建完在任务卡上再补）
+    receiver: '',
+    receiverCompany: '',
+    receiverPhone: '',
+    address: '',
+    // 收货信息编辑弹层
+    showReceiver: false,
+    receiverForm: { receiver: '', receiverCompany: '', receiverPhone: '', address: '' },
     // 报工弹层
     showReporter: false,
     reportQty: '',
@@ -153,6 +170,7 @@ Page({
   refresh() {
     const tasks = store.listTasks()
     const current = store.getCurrentTask()
+    const sortLabel = SORT_LABELS[store.getTaskSortMode()] || '交付日期'
 
     let targetId = this.data.taskId
     const targetExists = targetId && tasks.some((item) => item.id === targetId)
@@ -168,6 +186,7 @@ Page({
         summary: null,
         items: [],
         tasks,
+        sortLabel,
         filters: buildFilters(null),
         tipText: '还没有生产任务，点下方按钮创建一个',
         tipLevel: 'muted'
@@ -213,6 +232,7 @@ Page({
         analysis,
         summary: analysis ? analysis.summary : null,
         tasks,
+        sortLabel,
         filters: buildFilters(analysis),
         tipText,
         tipLevel
@@ -407,7 +427,27 @@ Page({
       presetVersion: '',
       planQty: '20',
       dueDate: defaultDue(),
-      remark: ''
+      remark: '',
+      // 收货信息不自动带上一次的值，避免给不同客户下单时误提交旧地址
+      receiver: '',
+      receiverCompany: '',
+      receiverPhone: '',
+      address: ''
+    })
+  },
+
+  /** 新建任务时沿用当前任务的收货信息（同一客户续单） */
+  handleCopyReceiver() {
+    const task = this.data.task
+    if (!task || !task.hasReceiver) {
+      wx.showToast({ title: '当前任务还没有收货信息', icon: 'none' })
+      return
+    }
+    this.setData({
+      receiver: task.receiver || '',
+      receiverCompany: task.receiverCompany || '',
+      receiverPhone: task.receiverPhone || '',
+      address: task.address || ''
     })
   },
 
@@ -459,6 +499,53 @@ Page({
     this.setData({ remark: e.detail.value })
   },
 
+  /** 新建弹层里的收货信息输入（data-field 指定字段） */
+  handleFormReceiverInput(e) {
+    const { field } = e.currentTarget.dataset
+    if (!field) return
+    this.setData({ [field]: e.detail.value })
+  },
+
+  /** 打开收货信息编辑弹层：带入当前任务已有的收货信息 */
+  openReceiver() {
+    const task = this.data.task
+    if (!task) return
+    this.setData({
+      showReceiver: true,
+      receiverForm: {
+        receiver: task.receiver || '',
+        receiverCompany: task.receiverCompany || '',
+        receiverPhone: task.receiverPhone || '',
+        address: task.address || ''
+      }
+    })
+  },
+
+  closeReceiver() {
+    this.setData({ showReceiver: false })
+  },
+
+  handleReceiverInput(e) {
+    const { field } = e.currentTarget.dataset
+    if (!field) return
+    this.setData({ [`receiverForm.${field}`]: e.detail.value })
+  },
+
+  /** 保存收货信息 */
+  handleReceiverSave() {
+    const task = this.data.task
+    if (!task) return
+
+    const result = store.updateTaskReceiver(task.id, this.data.receiverForm)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+
+    this.setData({ showReceiver: false }, () => this.refresh())
+    wx.showToast({ title: '收货信息已保存', icon: 'success' })
+  },
+
   /** 创建任务 */
   handleCreateSubmit() {
     const bom = this.data.boms[this.data.bomIndex]
@@ -479,7 +566,11 @@ Page({
       planQty,
       dueDate: this.data.dueDate,
       remark: this.data.remark,
-      operator: user ? user.name : '张伟'
+      operator: user ? user.name : '张伟',
+      receiver: this.data.receiver,
+      receiverCompany: this.data.receiverCompany,
+      receiverPhone: this.data.receiverPhone,
+      address: this.data.address
     })
 
     if (!result.ok) {

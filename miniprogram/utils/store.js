@@ -11,7 +11,22 @@ const STORAGE_KEY = 'wms_demo_state_v1'
 const SESSION_KEY = 'wms_demo_session_v1'
 
 /** 数据结构版本，用于存量数据迁移 */
-const SCHEMA_VERSION = 4
+const SCHEMA_VERSION = 6
+
+/**
+ * 任务排序模式
+ * - due：按交付日期（默认，早的优先）
+ * - amount：按任务总价（高的优先）
+ * - created：按创建时间（先下的先做）
+ * - manual：手动优先级（拖动 / 编号 / 上下移）
+ */
+const TASK_SORT_MODES = [
+  { key: 'due', label: '交付日期' },
+  { key: 'amount', label: '任务总价' },
+  { key: 'created', label: '下单时间' },
+  { key: 'manual', label: '手动排序' }
+]
+const DEFAULT_SORT_MODE = 'due'
 
 /** 兜底分类：删除某个分类时，其下商品默认归到这里；本分类不可删除 */
 const FALLBACK_CATEGORY = '未分类'
@@ -89,6 +104,39 @@ function formatDayLabel(createdAt) {
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
   if (dayKey(date) === dayKey(yesterday)) return '昨天'
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+/** 千分位，避免依赖 toLocaleString 在不同机型表现不一致 */
+function groupDigits(value) {
+  const num = Math.round(Math.abs(Number(value) || 0))
+  const str = `${num}`
+  let out = ''
+  for (let i = 0; i < str.length; i += 1) {
+    const rest = str.length - i
+    out += str[i]
+    if (rest > 1 && (rest - 1) % 3 === 0) out += ','
+  }
+  return out
+}
+
+/**
+ * 金额展示：1 万以内显示「¥8,600」，1 万以上显示「¥17.2 万」
+ * 只用于展示，排序仍然用原始数值
+ */
+function formatMoney(value) {
+  const num = Number(value) || 0
+  if (Math.abs(num) < 10000) return `¥${groupDigits(num)}`
+  const wan = num / 10000
+  const text = Math.abs(wan) >= 100 ? `${Math.round(wan)}` : `${Math.round(wan * 10) / 10}`
+  return `¥${text} 万`
+}
+
+/** 解析金额输入，允许为空（按 0 处理），非法返回 NaN */
+function parseMoney(text) {
+  const trimmed = String(text === undefined || text === null ? '' : text).trim()
+  if (!trimmed) return 0
+  const num = Number(trimmed.replace(/,/g, ''))
+  return isFinite(num) && num >= 0 ? num : NaN
 }
 
 /** 深拷贝，避免页面直接改动仓库内对象 */
@@ -545,6 +593,8 @@ const SEED_BOMS = [
     version: 'V3.1',
     name: '机器人头部机芯 V3.1',
     remark: '主线版本：双电机 + 磁编码器闭环',
+    // 单台机芯价格（元），生产任务按它与计划台数算总价
+    price: 8600,
     items: [
       { goodsId: 'M3001', qty: 1 },
       { goodsId: 'M3002', qty: 1 },
@@ -569,6 +619,7 @@ const SEED_BOMS = [
     version: 'V3.0',
     name: '机器人头部机芯 V3.0',
     remark: '旧版：单减速箱、无编码器',
+    price: 7200,
     items: [
       { goodsId: 'M3001', qty: 1 },
       { goodsId: 'M3002', qty: 1 },
@@ -608,6 +659,10 @@ function buildSeedTasks() {
       status: 'doing',
       operator: '张伟',
       remark: '首批试产',
+      receiver: '陈志强',
+      receiverCompany: '东莞市智泉机器人有限公司',
+      receiverPhone: '13800138000',
+      address: '广东省东莞市松山湖园区科技九路 6 号 A 栋 3 楼',
       dueDate: dueOf(5),
       sortWeight: parseDayTime(dueOf(5)),
       createdAt: now,
@@ -624,6 +679,10 @@ function buildSeedTasks() {
       status: 'doing',
       operator: '李娜',
       remark: '客户补单',
+      receiver: '王敏',
+      receiverCompany: '',
+      receiverPhone: '13612345678',
+      address: '江苏省苏州市吴中区木渎镇金枫路 128 号 2 号厂房',
       dueDate: dueOf(9),
       sortWeight: parseDayTime(dueOf(9)),
       createdAt: now - 60 * 1000,
@@ -738,7 +797,9 @@ function createInitialState() {
     goodsSeq: 1000 + SEED_GOODS.length,
     boms: clone(SEED_BOMS),
     tasks: buildSeedTasks(),
-    taskSeq: buildSeedTasks().length
+    taskSeq: buildSeedTasks().length,
+    // 任务列表排序模式：due / amount / created / manual
+    taskSortMode: DEFAULT_SORT_MODE
   }
 }
 
@@ -828,6 +889,33 @@ function migrateState(data) {
       changed = true
     }
   })
+
+  // v4 → v5：BOM 增加单台价格（老数据按种子价格补，找不到就留 0 让用户自己填）
+  ;(data.boms || []).forEach((bom) => {
+    if (typeof bom.price !== 'number' || !isFinite(bom.price)) {
+      const seed = SEED_BOMS.find((item) => item.version === bom.version)
+      bom.price = seed ? seed.price : 0
+      changed = true
+    }
+  })
+
+  // v5 → v6：任务增加收货信息（老任务没有，补空串，用户可在任务卡上补填）
+  ;(data.tasks || []).forEach((task) => {
+    let patched = false
+    ;['receiver', 'receiverCompany', 'receiverPhone', 'address'].forEach((key) => {
+      if (typeof task[key] !== 'string') {
+        task[key] = ''
+        patched = true
+      }
+    })
+    if (patched) changed = true
+  })
+
+  // v4 → v5：任务列表排序模式，默认按交付日期
+  if (TASK_SORT_MODES.every((item) => item.key !== data.taskSortMode)) {
+    data.taskSortMode = DEFAULT_SORT_MODE
+    changed = true
+  }
 
   if (data.schemaVersion !== SCHEMA_VERSION) {
     data.schemaVersion = SCHEMA_VERSION
@@ -1477,6 +1565,16 @@ function decorateBom(bom) {
     version: bom.version,
     name: bom.name,
     remark: bom.remark || '',
+    // 单台机芯价格（元）
+    price: Number(bom.price) || 0,
+    priceText: formatMoney(bom.price),
+    // 物料成本合计（按商品采购价 × 单台用量），可用来对比售价
+    cost: Math.round(
+      items.reduce((sum, item) => sum + (Number(item.price) || 0) * item.qty, 0) * 100
+    ) / 100,
+    costText: formatMoney(
+      items.reduce((sum, item) => sum + (Number(item.price) || 0) * item.qty, 0)
+    ),
     updatedAt: bom.updatedAt || 0,
     items,
     itemCount: items.length,
@@ -1514,6 +1612,10 @@ function saveBom(payload) {
 
   if (!version) return { ok: false, message: '请填写版本号，如 V3.1' }
 
+  const price = parseMoney(data.price)
+  if (isNaN(price)) return { ok: false, message: '单台价格需为大于等于 0 的数字' }
+  if (price > 10000000) return { ok: false, message: '单台价格过大' }
+
   const duplicated = current.boms.find(
     (item) => item.version.toLowerCase() === version.toLowerCase() && item.id !== data.id
   )
@@ -1525,6 +1627,7 @@ function saveBom(payload) {
     bom.version = version
     bom.name = (data.name || '').trim() || `机器人头部机芯 ${version}`
     bom.remark = (data.remark || '').trim()
+    bom.price = price
     bom.updatedAt = Date.now()
     persist()
     return { ok: true, bom: decorateBom(bom) }
@@ -1543,6 +1646,7 @@ function saveBom(payload) {
     version,
     name: (data.name || '').trim() || `机器人头部机芯 ${version}`,
     remark: (data.remark || '').trim(),
+    price,
     items: [],
     updatedAt: Date.now()
   }
@@ -1825,23 +1929,73 @@ function getRawTask(taskId) {
   return loadState().tasks.find((item) => item.id === taskId) || null
 }
 
-/** 排序权重：优先用手动调整过的权重，没调过就按交付日期 */
+/** 排序权重：手动排序用的顺序值，没调过就退回交付日期 */
 function taskWeightOf(task) {
   if (typeof task.sortWeight === 'number' && isFinite(task.sortWeight)) return task.sortWeight
   return parseDayTime(task.dueDate) || task.createdAt || 0
 }
 
+/** 任务总价 = 该版本单台价格 × 计划台数 */
+function taskAmountOf(task) {
+  const bom = getRawBom(task.bomId)
+  const unitPrice = bom ? Number(bom.price) || 0 : 0
+  return unitPrice * (Number(task.planQty) || 0)
+}
+
+/** 当前排序模式：due（交付日期）/ amount（总价）/ created（下单时间）/ manual（手动） */
+function getTaskSortMode() {
+  const mode = loadState().taskSortMode
+  return TASK_SORT_MODES.some((item) => item.key === mode) ? mode : DEFAULT_SORT_MODE
+}
+
 /**
- * 任务排序：进行中在前，再按优先级权重升序（默认即交付日期由早到晚），
- * 权重相同按创建时间先后，保证顺序稳定
+ * 任务排序：进行中在前，再按当前排序模式
+ * - due：交付日期早的在前
+ * - amount：总价高的在前
+ * - created：下单早的在前（先下的先做）
+ * - manual：手动权重，即用户拖动 / 编号后的顺序
+ * 同值统一用创建时间兜底，保证顺序稳定
  */
 function compareTaskOrder(a, b) {
   const aDone = a.status === 'done' ? 1 : 0
   const bDone = b.status === 'done' ? 1 : 0
   if (aDone !== bDone) return aDone - bDone
-  const diff = taskWeightOf(a) - taskWeightOf(b)
+
+  const mode = getTaskSortMode()
+  let diff = 0
+  if (mode === 'amount') {
+    diff = taskAmountOf(b) - taskAmountOf(a)
+  } else if (mode === 'created') {
+    diff = (a.createdAt || 0) - (b.createdAt || 0)
+  } else if (mode === 'manual') {
+    diff = taskWeightOf(a) - taskWeightOf(b)
+  } else {
+    diff = (parseDayTime(a.dueDate) || 0) - (parseDayTime(b.dueDate) || 0)
+  }
   if (diff !== 0) return diff
   return (a.createdAt || 0) - (b.createdAt || 0)
+}
+
+/** 进行中的任务，按当前排序模式排好 */
+function sortedDoingTasks() {
+  return loadState()
+    .tasks.filter((task) => task.status === 'doing')
+    .sort(compareTaskOrder)
+}
+
+/**
+ * 按给定顺序重排手动权重
+ * 先把已有权重排序去重递增（同一天交付的两条也能区分），再按新顺序回填
+ */
+function applyTaskOrder(ordered) {
+  if (!ordered.length) return
+  const weights = ordered.map(taskWeightOf).sort((a, b) => a - b)
+  for (let i = 1; i < weights.length; i += 1) {
+    if (weights[i] <= weights[i - 1]) weights[i] = weights[i - 1] + 1
+  }
+  ordered.forEach((task, index) => {
+    task.sortWeight = weights[index]
+  })
 }
 
 /** 把日期文本规范成 YYYY-MM-DD，非法返回空串 */
@@ -1851,9 +2005,10 @@ function normalizeDay(text) {
   return dayKey(new Date(time))
 }
 
-/** 给任务补上进度、齐套概览与交付日期 */
+/** 给任务补上进度、齐套概览、交付日期与金额 */
 function decorateTask(task) {
-  const analysis = analyzeBom(getRawBom(task.bomId), task.planQty)
+  const bom = getRawBom(task.bomId)
+  const analysis = analyzeBom(bom, task.planQty)
   const progress =
     task.planQty > 0 ? Math.min(100, Math.round((task.doneQty / task.planQty) * 100)) : 0
   const due = dueInfoOf(task.dueDate)
@@ -1863,15 +2018,36 @@ function decorateTask(task) {
     due.dueTip = '已完成'
   }
 
+  // 金额：单台价格取自 BOM 维护页的版本价格
+  const unitPrice = bom ? Number(bom.price) || 0 : 0
+  const planQty = Number(task.planQty) || 0
+  const doneQty = Number(task.doneQty) || 0
+
   return Object.assign({}, task, due, {
     statusText: task.status === 'done' ? '已完成' : '进行中',
     // 同版本可能有多条任务，用单号尾号区分
     idShort: String(task.id || '').slice(-2),
     remarkText: task.remark || '',
-    remainQty: Math.max(0, task.planQty - task.doneQty),
+    // 收货信息展示字段
+    receiverName: task.receiver || '',
+    receiverCompanyText: task.receiverCompany || '',
+    receiverPhoneText: task.receiverPhone || '',
+    addressText: task.address || '',
+    // 姓名与公司合一行展示：公司 · 姓名（只填一个就显示一个）
+    receiverTitle: [task.receiverCompany, task.receiver].filter(Boolean).join(' · '),
+    hasReceiver: !!(task.receiver || task.receiverCompany || task.address),
+    remainQty: Math.max(0, planQty - doneQty),
     progress,
     hasBom: !!analysis,
-    summary: analysis ? analysis.summary : null
+    summary: analysis ? analysis.summary : null,
+    // 价格与金额
+    unitPrice,
+    unitPriceText: formatMoney(unitPrice),
+    amount: unitPrice * planQty,
+    amountText: formatMoney(unitPrice * planQty),
+    doneAmount: unitPrice * doneQty,
+    doneAmountText: formatMoney(unitPrice * doneQty),
+    hasPrice: unitPrice > 0
   })
 }
 
@@ -1904,6 +2080,7 @@ function getCurrentTask() {
  * 每条补上优先级序号与能否上移/下移，页面直接渲染
  */
 function getTaskBoard() {
+  const mode = getTaskSortMode()
   const tasks = listTasks().filter((task) => task.status === 'doing')
   const board = tasks.map((task, index) =>
     Object.assign({}, task, {
@@ -1916,9 +2093,33 @@ function getTaskBoard() {
   return {
     tasks: board,
     total: board.length,
+    sortMode: mode,
+    sortModes: TASK_SORT_MODES.map((item) => Object.assign({}, item, { active: item.key === mode })),
+    totalAmount: board.reduce((sum, task) => sum + task.amount, 0),
+    totalAmountText: formatMoney(board.reduce((sum, task) => sum + task.amount, 0)),
     overdueCount: board.filter((task) => task.dueLevel === 'overdue').length,
     shortCount: board.filter((task) => task.summary && task.summary.shortKinds > 0).length
   }
+}
+
+/**
+ * 切换任务排序模式
+ * 切到「手动排序」时，先把当前看到的顺序固化成权重，避免顺序突然跳变
+ * @param {'due'|'amount'|'created'|'manual'} mode
+ */
+function setTaskSortMode(mode) {
+  const target = TASK_SORT_MODES.find((item) => item.key === mode)
+  if (!target) return { ok: false, message: '不支持的排序方式' }
+
+  const current = loadState()
+  if (mode === 'manual' && current.taskSortMode !== 'manual') {
+    // 用切换前的排序结果作为初始手动顺序
+    applyTaskOrder(sortedDoingTasks())
+  }
+
+  current.taskSortMode = mode
+  persist()
+  return { ok: true, mode, label: target.label }
 }
 
 /**
@@ -1928,11 +2129,7 @@ function getTaskBoard() {
  * @param {'up'|'down'} direction
  */
 function moveTask(taskId, direction) {
-  const current = loadState()
-  const doing = current.tasks
-    .filter((task) => task.status === 'doing')
-    .sort(compareTaskOrder)
-
+  const doing = sortedDoingTasks()
   const index = doing.findIndex((task) => task.id === taskId)
   if (index === -1) return { ok: false, message: '任务不存在或已完成' }
 
@@ -1940,30 +2137,51 @@ function moveTask(taskId, direction) {
   if (target < 0) return { ok: false, message: '已经是最高优先级' }
   if (target >= doing.length) return { ok: false, message: '已经是最低优先级' }
 
-  // 原有权重先保证严格递增，再按新顺序回填，避免「同一天」导致交换无效
-  const weights = doing.map(taskWeightOf).sort((a, b) => a - b)
-  for (let i = 1; i < weights.length; i += 1) {
-    if (weights[i] <= weights[i - 1]) weights[i] = weights[i - 1] + 1
-  }
+  const moved = doing.splice(index, 1)[0]
+  doing.splice(target, 0, moved)
+  applyTaskOrder(doing)
 
-  const ids = doing.map((task) => task.id)
-  const moved = ids.splice(index, 1)[0]
-  ids.splice(target, 0, moved)
-
-  ids.forEach((id, i) => {
-    const task = current.tasks.find((item) => item.id === id)
-    if (task) task.sortWeight = weights[i]
-  })
-
+  // 手动挪过之后就是手动排序模式，否则下次自动排序会把顺序冲掉
+  loadState().taskSortMode = 'manual'
   persist()
   return { ok: true, position: target + 1 }
 }
 
-/** 恢复「按交付日期自动排序」：把权重全部重置回交付日期 */
+/**
+ * 直接设置某条任务排第几（手动编号 1、2、3…）
+ * @param {string} taskId
+ * @param {number} position 从 1 开始
+ */
+function setTaskPriority(taskId, position) {
+  const doing = sortedDoingTasks()
+  const index = doing.findIndex((task) => task.id === taskId)
+  if (index === -1) return { ok: false, message: '任务不存在或已完成' }
+
+  const wanted = Math.floor(Number(position))
+  if (!wanted || wanted < 1) return { ok: false, message: '请输入 1 以上的序号' }
+  if (wanted > doing.length) {
+    return { ok: false, message: `最多只能排到第 ${doing.length} 位` }
+  }
+
+  const target = wanted - 1
+  if (target !== index) {
+    const moved = doing.splice(index, 1)[0]
+    doing.splice(target, 0, moved)
+    applyTaskOrder(doing)
+  }
+
+  loadState().taskSortMode = 'manual'
+  persist()
+  return { ok: true, position: target + 1 }
+}
+
+/** 恢复「按交付日期自动排序」：切回日期模式，并把权重重置回交付日期 */
 function resetTaskOrder() {
-  loadState().tasks.forEach((task) => {
+  const current = loadState()
+  current.tasks.forEach((task) => {
     task.sortWeight = parseDayTime(task.dueDate) || task.createdAt || 0
   })
+  current.taskSortMode = 'due'
   persist()
   return { ok: true }
 }
@@ -1987,9 +2205,70 @@ function setTaskDueDate(taskId, dueDate) {
   return { ok: true, task: decorateTask(task) }
 }
 
+/** 字段清洗：去首尾空格并截断，避免超长文本把卡片撑坏 */
+function cutText(value, max) {
+  const text = String(value === undefined || value === null ? '' : value).trim()
+  return max && text.length > max ? text.slice(0, max) : text
+}
+
+/**
+ * 收货信息清洗：收货人 / 收货单位 / 联系电话 / 收货地址
+ * 姓名与公司二选一即可（有的客户只留公司名），都填就一起展示
+ */
+function normalizeReceiver(payload) {
+  const data = payload || {}
+  const phoneRaw = cutText(data.receiverPhone, 20)
+  // 只保留数字与开头的 +，粘贴进来带空格、横线的手机号也能存
+  const phoneDigits = phoneRaw.replace(/[^\d]/g, '')
+  const phone = phoneRaw
+    ? `${phoneRaw.charAt(0) === '+' ? '+' : ''}${phoneDigits}`
+    : ''
+  return {
+    receiver: cutText(data.receiver, 20),
+    receiverCompany: cutText(data.receiverCompany, 40),
+    receiverPhone: phone,
+    address: cutText(data.address, 80)
+  }
+}
+
+/** 电话校验：填了就必须像号码（6~15 位数字），不填不拦 */
+function checkPhone(phone) {
+  if (!phone) return ''
+  const digits = phone.replace(/[^\d]/g, '')
+  if (digits.length < 6 || digits.length > 15) return '联系电话位数不对，请检查'
+  return ''
+}
+
+/**
+ * 修改收货信息（任务卡上点「修改」直接改）
+ * @param {string} taskId
+ * @param {{receiver?: string, receiverCompany?: string, receiverPhone?: string, address?: string}} payload
+ */
+function updateTaskReceiver(taskId, payload) {
+  const task = getRawTask(taskId)
+  if (!task) return { ok: false, message: '任务不存在' }
+
+  const info = normalizeReceiver(payload)
+  if (!info.receiver && !info.receiverCompany) {
+    return { ok: false, message: '请填写收货人或收货单位' }
+  }
+  if (!info.address) return { ok: false, message: '请填写收货地址' }
+  const phoneError = checkPhone(info.receiverPhone)
+  if (phoneError) return { ok: false, message: phoneError }
+
+  task.receiver = info.receiver
+  task.receiverCompany = info.receiverCompany
+  task.receiverPhone = info.receiverPhone
+  task.address = info.address
+  persist()
+  return { ok: true, task: decorateTask(task) }
+}
+
 /**
  * 新建生产任务
- * @param {{bomId: string, planQty: number, remark?: string, operator?: string}} payload
+ * @param {{bomId: string, planQty: number, dueDate?: string, receiver?: string,
+ *          receiverCompany?: string, receiverPhone?: string, address?: string,
+ *          remark?: string, operator?: string}} payload
  */
 function saveTask(payload) {
   const data = payload || {}
@@ -2000,6 +2279,17 @@ function saveTask(payload) {
   const planQty = Math.floor(Number(data.planQty) || 0)
   if (planQty <= 0) return { ok: false, message: '计划数量需大于 0' }
   if (planQty > 100000) return { ok: false, message: '计划数量过大' }
+
+  const receiver = normalizeReceiver(data)
+  // 收货信息允许先空着后补；但只要填了，就必须成套填写，避免存成半截信息发不出去
+  if (receiver.receiver || receiver.receiverCompany || receiver.address) {
+    if (!receiver.receiver && !receiver.receiverCompany) {
+      return { ok: false, message: '请填写收货人或收货单位' }
+    }
+    if (!receiver.address) return { ok: false, message: '请填写收货地址' }
+    const phoneError = checkPhone(receiver.receiverPhone)
+    if (phoneError) return { ok: false, message: phoneError }
+  }
 
   current.taskSeq = (current.taskSeq || 0) + 1
   const createdAt = Date.now()
@@ -2015,6 +2305,11 @@ function saveTask(payload) {
     status: 'doing',
     operator: data.operator || '张伟',
     remark: (data.remark || '').trim(),
+    // 收货信息：发货、送货时用
+    receiver: receiver.receiver,
+    receiverCompany: receiver.receiverCompany,
+    receiverPhone: receiver.receiverPhone,
+    address: receiver.address,
     dueDate,
     sortWeight: parseDayTime(dueDate),
     createdAt,
@@ -2206,12 +2501,17 @@ module.exports = {
   analyzeTask,
   // 生产任务
   listTasks,
+  getTaskSortMode,
+  setTaskSortMode,
+  setTaskPriority,
+  taskAmountOf,
   getTaskAnalysis,
   getCurrentTask,
   getTaskBoard,
   moveTask,
   resetTaskOrder,
   setTaskDueDate,
+  updateTaskReceiver,
   dueInfoOf,
   saveTask,
   reportTask,

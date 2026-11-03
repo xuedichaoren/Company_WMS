@@ -42,6 +42,41 @@
       </view>
     </picker>
 
+    <!-- 任务金额：单台价格取自 BOM 维护页 -->
+    <view class="task-card__amount {{task.hasPrice ? '' : 'task-card__amount--empty'}}">
+      <view class="task-card__amount-main">
+        <text class="task-card__amount-label">任务总价</text>
+        <text class="task-card__amount-value" wx:if="{{task.hasPrice}}">{{task.amountText}}</text>
+        <text class="task-card__amount-value" wx:else>未设置价格</text>
+      </view>
+      <view class="task-card__amount-meta" wx:if="{{task.hasPrice}}">
+        单价 {{task.unitPriceText}} × {{task.planQty}} 台
+        <text wx:if="{{task.doneQty}}"> · 已完工 {{task.doneAmountText}}</text>
+      </view>
+      <view class="task-card__amount-meta" wx:else bindtap="handleGoBom">去 BOM 维护设置单台价格 ›</view>
+    </view>
+
+    <!-- 收货信息：姓名 / 单位二选一，地址必填；点一下可修改 -->
+    <view
+      class="task-card__receiver {{task.hasReceiver ? '' : 'task-card__receiver--empty'}}"
+      hover-class="task-card__receiver--hover"
+      bindtap="openReceiver"
+    >
+      <view class="task-card__receiver-head">
+        <text class="task-card__receiver-label">收货信息</text>
+        <text class="task-card__receiver-edit">{{task.hasReceiver ? '修改 ›' : '填写 ›'}}</text>
+      </view>
+
+      <block wx:if="{{task.hasReceiver}}">
+        <view class="task-card__receiver-name">
+          <text class="task-card__receiver-title">{{task.receiverTitle || '未填收货人'}}</text>
+          <text class="task-card__receiver-phone" wx:if="{{task.receiverPhone}}">{{task.receiverPhone}}</text>
+        </view>
+        <view class="task-card__receiver-addr">{{task.addressText || '未填收货地址'}}</view>
+      </block>
+      <view class="task-card__receiver-tip" wx:else>还没有收货信息，点击填写收货人 / 收货单位与地址</view>
+    </view>
+
     <!-- 进度 -->
     <view class="progress">
       <view class="progress__bar">
@@ -173,6 +208,8 @@
   </view>
 
   <scroll-view class="tl" scroll-y>
+    <view class="tl__sort">当前排序：{{sortLabel}}（在首页可切换排序方式）</view>
+
     <view
       class="tl__row {{item.id === taskId ? 'tl__row--active' : ''}}"
       wx:for="{{taskList}}"
@@ -200,8 +237,13 @@
         <view class="tl__meta tl__meta--due tl__meta--{{item.dueLevel}}">
           交付 {{item.dueDate || '未设置'}} · {{item.dueTip}}
         </view>
+        <view class="tl__receiver" wx:if="{{item.hasReceiver}}">
+          收货 {{item.receiverTitle || '未填收货人'}} · {{item.addressText || '未填地址'}}
+        </view>
+        <view class="tl__receiver tl__receiver--empty" wx:else>收货信息待填</view>
         <view class="tl__meta-row">
           <text class="tl__meta">计划 {{item.planQty}} 台 · 已完工 {{item.doneQty}} 台</text>
+          <text class="tl__amount">{{item.amountText}}</text>
           <text
             class="tl__del"
             hover-class="tl__del--hover"
@@ -308,6 +350,62 @@
       </picker>
     </view>
 
+    <!-- 收货信息：可先空着，建完在任务卡上补 -->
+    <view class="sheet__sub">收货信息（可后补）</view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">收货人</text>
+      <input
+        class="sheet__input"
+        value="{{receiver}}"
+        placeholder="姓名，如 陈志强"
+        placeholder-class="sheet__placeholder"
+        data-field="receiver"
+        bindinput="handleFormReceiverInput"
+      />
+    </view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">收货单位</text>
+      <input
+        class="sheet__input"
+        value="{{receiverCompany}}"
+        placeholder="公司名称，与收货人任填其一"
+        placeholder-class="sheet__placeholder"
+        data-field="receiverCompany"
+        bindinput="handleFormReceiverInput"
+      />
+    </view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">联系电话</text>
+      <input
+        class="sheet__input"
+        type="number"
+        value="{{receiverPhone}}"
+        placeholder="手机号或座机"
+        placeholder-class="sheet__placeholder"
+        data-field="receiverPhone"
+        bindinput="handleFormReceiverInput"
+      />
+    </view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">收货地址</text>
+      <input
+        class="sheet__input"
+        value="{{address}}"
+        placeholder="省市区 + 详细地址"
+        placeholder-class="sheet__placeholder"
+        data-field="address"
+        bindinput="handleFormReceiverInput"
+      />
+    </view>
+
+    <view class="sheet__link-row" wx:if="{{task.hasReceiver}}" bindtap="handleCopyReceiver">
+      同一客户续单？<text class="sheet__link">沿用当前任务的收货信息</text>
+    </view>
+
     <view class="sheet__row">
       <text class="sheet__label">备注</text>
       <input
@@ -320,6 +418,72 @@
     </view>
 
     <view class="sheet__tips">创建后自动按 BOM 计算齐套情况，并按交付日期排入任务优先级</view>
+    <view class="sheet__bottom"></view>
+  </scroll-view>
+</view>
+
+<!-- ==================== 收货信息弹层 ==================== -->
+<view class="mask" wx:if="{{showReceiver}}" bindtap="closeReceiver"></view>
+<view class="sheet" wx:if="{{showReceiver}}" catchtap="noop">
+  <view class="sheet__head">
+    <text class="sheet__cancel" bindtap="closeReceiver">取消</text>
+    <text class="sheet__title">收货信息</text>
+    <text class="sheet__save" bindtap="handleReceiverSave">保存</text>
+  </view>
+
+  <scroll-view class="sheet__body" scroll-y>
+    <view class="sheet__row">
+      <text class="sheet__label">收货人</text>
+      <input
+        class="sheet__input"
+        value="{{receiverForm.receiver}}"
+        placeholder="姓名，如 陈志强"
+        placeholder-class="sheet__placeholder"
+        data-field="receiver"
+        bindinput="handleReceiverInput"
+      />
+    </view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">收货单位</text>
+      <input
+        class="sheet__input"
+        value="{{receiverForm.receiverCompany}}"
+        placeholder="公司名称，与收货人任填其一"
+        placeholder-class="sheet__placeholder"
+        data-field="receiverCompany"
+        bindinput="handleReceiverInput"
+      />
+    </view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">联系电话</text>
+      <input
+        class="sheet__input"
+        type="number"
+        value="{{receiverForm.receiverPhone}}"
+        placeholder="手机号或座机"
+        placeholder-class="sheet__placeholder"
+        data-field="receiverPhone"
+        bindinput="handleReceiverInput"
+      />
+    </view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">收货地址</text>
+      <input
+        class="sheet__input"
+        value="{{receiverForm.address}}"
+        placeholder="省市区 + 详细地址"
+        placeholder-class="sheet__placeholder"
+        data-field="address"
+        bindinput="handleReceiverInput"
+      />
+    </view>
+
+    <view class="sheet__tips">
+      收货人与收货单位任填其一，收货地址必填；电话用于物流联系，选填但建议填写。
+    </view>
     <view class="sheet__bottom"></view>
   </scroll-view>
 </view>
