@@ -654,6 +654,136 @@ button::after {
   color: var(--color-text-muted);
 }
 
+/* ============================================================
+   底部弹层（生产任务 / BOM 维护页共用）
+   ============================================================ */
+.mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 30;
+  background: rgba(15, 23, 42, 0.45);
+  animation: mask-in 0.2s ease;
+}
+
+@keyframes mask-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 31;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 32rpx 32rpx 0 0;
+  background: #ffffff;
+  animation: sheet-in 0.24s ease;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 26rpx 32rpx;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.sheet__title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.sheet__cancel {
+  font-size: 27rpx;
+  color: var(--color-text-secondary);
+}
+
+.sheet__save {
+  font-size: 27rpx;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.sheet__body {
+  flex: 1;
+  max-height: calc(82vh - 96rpx);
+  padding: 0 32rpx;
+}
+
+.sheet__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.sheet__label {
+  flex-shrink: 0;
+  width: 190rpx;
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+}
+
+.sheet__req {
+  color: var(--color-danger);
+}
+
+.sheet__input {
+  flex: 1;
+  min-width: 0;
+  height: 52rpx;
+  font-size: 27rpx;
+  color: var(--color-text);
+  text-align: right;
+}
+
+.sheet__placeholder {
+  color: #c2c9d6;
+  font-size: 26rpx;
+}
+
+.sheet__value {
+  flex: 1;
+  min-width: 0;
+  font-size: 27rpx;
+  text-align: right;
+  color: var(--color-text);
+}
+
+.sheet__tips {
+  padding: 24rpx 0 8rpx;
+  text-align: center;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.sheet__bottom {
+  height: calc(24rpx + env(safe-area-inset-bottom));
+}
+
 /* 底部安全区 */
 .safe-bottom {
   height: 24rpx;

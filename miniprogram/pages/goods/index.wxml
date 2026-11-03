@@ -8,7 +8,7 @@
         <input
           class="search-box__input"
           value="{{keyword}}"
-          placeholder="搜索商品名称 / SKU / 条码"
+          placeholder="搜索商品名称 / SKU / 条码 / 供应商"
           placeholder-class="search-box__placeholder"
           confirm-type="search"
           bindinput="handleKeywordInput"
@@ -25,18 +25,24 @@
   </view>
 
   <!-- 分类筛选 -->
-  <scroll-view class="chip-bar chip-bar--scroll" scroll-x show-scrollbar="{{false}}">
-    <view
-      class="chip {{category === item ? 'chip--active' : ''}}"
-      wx:for="{{categories}}"
-      wx:key="*this"
-      data-category="{{item}}"
-      hover-class="chip--hover"
-      bindtap="handleCategoryTap"
-    >
-      {{item}}
+  <view class="cat-bar">
+    <scroll-view class="cat-bar__scroll chip-bar chip-bar--scroll" scroll-x show-scrollbar="{{false}}">
+      <view
+        class="chip {{category === item ? 'chip--active' : ''}}"
+        wx:for="{{categories}}"
+        wx:key="*this"
+        data-category="{{item}}"
+        hover-class="chip--hover"
+        bindtap="handleCategoryTap"
+      >
+        {{item}}
+      </view>
+    </scroll-view>
+
+    <view class="cat-bar__manage" hover-class="cat-bar__manage--hover" bindtap="handleManageCategory">
+      分类管理
     </view>
-  </scroll-view>
+  </view>
 
   <!-- 商品列表 -->
   <view class="list">
@@ -62,6 +68,10 @@
       <view class="item__tags">
         <text class="tag tag--primary">{{item.category}}</text>
         <text class="item__stock">库存 {{item.stock}}{{item.unit}} / 安全 {{item.safeStock}}{{item.unit}}</text>
+      </view>
+
+      <view class="item__supplier {{item.supplier ? '' : 'item__supplier--empty'}}">
+        供应商 {{item.supplier || '未填写，点编辑补充'}}
       </view>
 
       <view class="item__foot">
@@ -149,6 +159,19 @@
           <view class="sheet__value">{{form.category}}</view>
         </view>
       </picker>
+
+      <view class="sheet__row">
+        <text class="sheet__label">供应商</text>
+        <input
+          class="sheet__input"
+          data-field="supplier"
+          value="{{form.supplier}}"
+          maxlength="40"
+          placeholder="如 宁波精工机械"
+          placeholder-class="sheet__placeholder"
+          bindinput="handleFieldInput"
+        />
+      </view>
 
       <view class="sheet__row">
         <text class="sheet__label">单位</text>

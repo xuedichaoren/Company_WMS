@@ -1,11 +1,14 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/task/index",
+    "pages/bom/index",
     "pages/login/index",
     "pages/inbound/index",
     "pages/outbound/index",
     "pages/stock/index",
     "pages/goods/index",
+    "pages/category/index",
     "pages/log/index"
   ],
   "window": {

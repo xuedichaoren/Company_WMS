@@ -1,0 +1,120 @@
+/* pages/category/index.wxss —— 分类管理页 */
+
+/* ==================== 顶部 ==================== */
+.header {
+  padding: 32rpx 24rpx 28rpx;
+  background: linear-gradient(135deg, #2f6bff 0%, #4b84ff 62%, #77a4ff 100%);
+  border-radius: 0 0 32rpx 32rpx;
+}
+
+.header__title {
+  font-size: 38rpx;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.header__sub {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ==================== 使用说明 ==================== */
+.notice {
+  padding: 24rpx;
+  background: #ffffff;
+}
+
+.notice__title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.notice__text {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+/* ==================== 分类列表 ==================== */
+.list-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 32rpx 24rpx 4rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.list-title__hint {
+  font-size: 21rpx;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.list {
+  padding: 0 24rpx;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14rpx;
+  padding: 24rpx;
+  border-radius: 18rpx;
+  background: var(--color-card);
+  box-shadow: 0 6rpx 20rpx rgba(31, 42, 68, 0.05);
+}
+
+.row--hover {
+  opacity: 0.7;
+}
+
+.row__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.row__title {
+  overflow: hidden;
+  font-size: 29rpx;
+  font-weight: 500;
+  color: var(--color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__meta {
+  margin-top: 6rpx;
+  overflow: hidden;
+  font-size: 21rpx;
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__ops {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+
+.row__op {
+  padding: 8rpx 20rpx;
+  margin-left: 10rpx;
+  border-radius: 999rpx;
+  background: #f2f4f9;
+  font-size: 22rpx;
+  color: var(--color-primary);
+}
+
+.row__op--danger {
+  color: var(--color-danger);
+  background: var(--color-danger-light);
+}

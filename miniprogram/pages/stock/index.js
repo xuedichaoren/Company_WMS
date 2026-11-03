@@ -115,6 +115,7 @@ Page({
         `条码：${goods.barCode || '未设置'}`,
         `规格：${goods.spec}`,
         `分类：${goods.category}`,
+        `供应商：${goods.supplier || '未填写'}`,
         `库位：${goods.location || '未设置'}`,
         `当前库存：${goods.stock}${goods.unit}`,
         `安全库存：${goods.safeStock}${goods.unit}`,

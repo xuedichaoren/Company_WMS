@@ -1,0 +1,328 @@
+<!-- 生产任务页：当前任务 / 物料齐套分析 / 采购清单 / 报工 -->
+<view class="screen screen--with-footer">
+  <!-- ==================== 任务卡 ==================== -->
+  <view class="task-card" wx:if="{{task}}">
+    <view class="task-card__head">
+      <view class="task-card__title-wrap">
+        <view class="task-card__version-row">
+          <text class="task-card__version">{{task.version}}</text>
+          <text class="task-card__badge {{task.status === 'done' ? 'task-card__badge--done' : ''}}">
+            {{task.statusText}}
+          </text>
+        </view>
+        <view class="task-card__name">{{task.name}}</view>
+      </view>
+      <view class="task-card__ops">
+        <view class="task-card__switch" hover-class="task-card__switch--hover" bindtap="handleSwitchTask">
+          切换
+        </view>
+        <view class="task-card__more" hover-class="task-card__switch--hover" bindtap="handleMore">
+          ⋯
+        </view>
+      </view>
+    </view>
+
+    <view class="task-card__meta">
+      {{task.id}} · {{task.operator}} · {{task.time}}
+    </view>
+
+    <!-- 进度 -->
+    <view class="progress">
+      <view class="progress__bar">
+        <view class="progress__fill" style="width: {{task.progress}}%;"></view>
+      </view>
+      <view class="progress__text">
+        计划 {{task.planQty}} 台 · 已完工 {{task.doneQty}} 台 · 剩余 {{task.remainQty}} 台
+      </view>
+    </view>
+
+    <!-- 齐套摘要 -->
+    <view class="kpi-row" wx:if="{{summary}}">
+      <view class="kpi">
+        <text class="kpi__value">{{summary.maxAssemble}}</text>
+        <text class="kpi__label">最多可做(台)</text>
+      </view>
+      <view class="kpi kpi--danger">
+        <text class="kpi__value">{{summary.shortKinds}}</text>
+        <text class="kpi__label">缺料(种)</text>
+      </view>
+      <view class="kpi kpi--warning">
+        <text class="kpi__value">{{summary.warnKinds}}</text>
+        <text class="kpi__label">做完预警(种)</text>
+      </view>
+    </view>
+
+    <view class="tip tip--{{tipLevel}}">{{tipText}}</view>
+  </view>
+
+  <!-- 无任务 -->
+  <view class="task-empty" wx:else>
+    <view class="task-empty__title">暂无生产任务</view>
+    <view class="task-empty__text">{{tipText}}</view>
+    <view class="btn btn--primary task-empty__btn" hover-class="btn--hover" bindtap="handleCreate">
+      新建生产任务
+    </view>
+  </view>
+
+  <!-- ==================== 物料齐套明细 ==================== -->
+  <block wx:if="{{analysis}}">
+    <scroll-view class="chip-bar chip-bar--scroll" scroll-x show-scrollbar="{{false}}">
+      <view
+        class="chip {{filter === item.key ? 'chip--active' : ''}}"
+        wx:for="{{filters}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        hover-class="chip--hover"
+        bindtap="handleFilterTap"
+      >
+        {{item.label}}
+        <text class="chip__count">{{item.count}}</text>
+      </view>
+    </scroll-view>
+
+    <view class="list">
+      <view
+        class="mat mat--{{item.status}}"
+        wx:for="{{items}}"
+        wx:key="goodsId"
+        data-id="{{item.goodsId}}"
+        hover-class="mat--hover"
+        bindtap="handleItemTap"
+      >
+        <view class="mat__head">
+          <text class="mat__title">{{item.title}}</text>
+          <text class="tag {{item.tagClass}}">{{item.statusText}}</text>
+        </view>
+
+        <view class="mat__meta">
+          {{item.sku}}<text wx:if="{{item.spec}}"> · {{item.spec}}</text>
+          <text wx:if="{{item.unit}}">（单位：{{item.unit}}）</text>
+        </view>
+
+        <view class="mat__nums">
+          <view class="mat__num">
+            <text class="mat__num-value">{{item.qtyPerUnit}}</text>
+            <text class="mat__num-label">单台</text>
+          </view>
+          <view class="mat__num">
+            <text class="mat__num-value">{{item.need}}</text>
+            <text class="mat__num-label">需求</text>
+          </view>
+          <view class="mat__num">
+            <text class="mat__num-value">{{item.stock}}</text>
+            <text class="mat__num-label">库存</text>
+          </view>
+          <view class="mat__num {{item.diffDanger ? 'mat__num--danger' : ''}}">
+            <text class="mat__num-value">{{item.diffText}}</text>
+            <text class="mat__num-label">{{item.diffLabel}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{items.length === 0}}" class="empty-state">
+        <text class="empty-state__text">该分类下没有物料</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- 底部操作栏 -->
+  <view class="footer-bar" wx:if="{{task}}">
+    <view class="footer-bar__row">
+      <view
+        class="btn btn--ghost btn--small footer-bar__ghost"
+        hover-class="btn--hover"
+        bindtap="handlePurchaseOpen"
+      >
+        生成采购单
+      </view>
+      <view
+        class="btn btn--primary footer-bar__btn {{task.status === 'done' ? 'btn--disabled' : ''}}"
+        hover-class="btn--hover"
+        bindtap="handleReportOpen"
+      >
+        {{task.status === 'done' ? '任务已完成' : '报工 · 按 BOM 扣料'}}
+      </view>
+    </view>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>
+
+<!-- ==================== 任务列表弹层（切换 / 删除） ==================== -->
+<view class="mask" wx:if="{{showTaskList}}" bindtap="closeTaskList"></view>
+<view class="sheet" wx:if="{{showTaskList}}" catchtap="noop">
+  <view class="sheet__head">
+    <text class="sheet__title">生产任务</text>
+    <text class="sheet__cancel" bindtap="closeTaskList">关闭</text>
+  </view>
+
+  <scroll-view class="tl" scroll-y>
+    <view
+      class="tl__row {{item.id === taskId ? 'tl__row--active' : ''}}"
+      wx:for="{{taskList}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      hover-class="tl__row--hover"
+      bindtap="handleTaskPick"
+    >
+      <view class="tl__main">
+        <view class="tl__title-row">
+          <text class="tl__version">{{item.version}}</text>
+          <text class="tl__badge {{item.status === 'done' ? 'tl__badge--done' : ''}}">
+            {{item.statusText}}
+          </text>
+          <text class="tl__current" wx:if="{{item.id === taskId}}">当前</text>
+        </view>
+        <view class="tl__meta">
+          {{item.id}} · 计划 {{item.planQty}} 台 · 已完工 {{item.doneQty}} 台
+        </view>
+        <view class="tl__meta">{{item.time}}</view>
+      </view>
+      <view
+        class="tl__del"
+        hover-class="tl__del--hover"
+        data-id="{{item.id}}"
+        catchtap="handleTaskDelete"
+      >
+        删除
+      </view>
+    </view>
+
+    <view class="tl__empty" wx:if="{{!taskList.length}}">暂无生产任务</view>
+  </scroll-view>
+
+  <view class="tl__foot">
+    <view class="btn btn--primary tl__create" hover-class="btn--hover" bindtap="handleTaskCreate">
+      ＋ 新建任务
+    </view>
+  </view>
+  <view class="sheet__bottom"></view>
+</view>
+
+<!-- ==================== 新建任务弹层 ==================== -->
+<view class="mask" wx:if="{{showCreator}}" bindtap="closeCreator"></view>
+<view class="sheet" wx:if="{{showCreator}}" catchtap="noop">
+  <view class="sheet__head">
+    <text class="sheet__cancel" bindtap="closeCreator">取消</text>
+    <text class="sheet__title">新建生产任务</text>
+    <text class="sheet__save" bindtap="handleCreateSubmit">创建</text>
+  </view>
+
+  <scroll-view class="sheet__body" scroll-y>
+    <view class="sheet__row">
+      <text class="sheet__label">机型版本<text class="sheet__req">*</text></text>
+      <picker
+        mode="selector"
+        range="{{bomNames}}"
+        value="{{bomIndex}}"
+        bindchange="handleBomChange"
+        class="sheet__value-wrap"
+      >
+        <view class="sheet__value">{{bomNames[bomIndex] || '请选择'}} ›</view>
+      </picker>
+    </view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">计划数量<text class="sheet__req">*</text></text>
+      <view class="stepper">
+        <view class="stepper__btn" hover-class="stepper__btn--hover" data-step="-1" bindtap="handlePlanQtyStep">−</view>
+        <input
+          class="stepper__input"
+          type="number"
+          value="{{planQty}}"
+          bindinput="handlePlanQtyInput"
+        />
+        <view class="stepper__btn" hover-class="stepper__btn--hover" data-step="1" bindtap="handlePlanQtyStep">+</view>
+      </view>
+    </view>
+
+    <view class="qty-quick">
+      <view class="qty-quick__item" data-value="5" bindtap="handlePlanQtyQuick">5 台</view>
+      <view class="qty-quick__item" data-value="10" bindtap="handlePlanQtyQuick">10 台</view>
+      <view class="qty-quick__item" data-value="20" bindtap="handlePlanQtyQuick">20 台</view>
+      <view class="qty-quick__item" data-value="50" bindtap="handlePlanQtyQuick">50 台</view>
+    </view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">备注</text>
+      <input
+        class="sheet__input"
+        value="{{remark}}"
+        placeholder="如：首批试产"
+        placeholder-class="sheet__placeholder"
+        bindinput="handleRemarkInput"
+      />
+    </view>
+
+    <view class="sheet__tips">创建后会自动按 BOM 计算物料齐套情况</view>
+    <view class="sheet__bottom"></view>
+  </scroll-view>
+</view>
+
+<!-- ==================== 报工弹层 ==================== -->
+<view class="mask" wx:if="{{showReporter}}" bindtap="closeReporter"></view>
+<view class="sheet" wx:if="{{showReporter}}" catchtap="noop">
+  <view class="sheet__head">
+    <text class="sheet__cancel" bindtap="closeReporter">取消</text>
+    <text class="sheet__title">生产报工</text>
+    <text class="sheet__save" bindtap="handleReportSubmit">确认报工</text>
+  </view>
+
+  <view class="sheet__body">
+    <view class="sheet__row">
+      <text class="sheet__label">本次完工数</text>
+      <view class="stepper">
+        <input
+          class="stepper__input"
+          type="number"
+          value="{{reportQty}}"
+          bindinput="handleReportQtyInput"
+        />
+        <view class="stepper__unit">台</view>
+      </view>
+    </view>
+
+    <view class="qty-quick">
+      <view class="qty-quick__item" data-value="all" bindtap="handleReportQtyQuick">全部剩余</view>
+      <view class="qty-quick__item" data-value="1" bindtap="handleReportQtyQuick">1 台</view>
+      <view class="qty-quick__item" data-value="5" bindtap="handleReportQtyQuick">5 台</view>
+      <view class="qty-quick__item" data-value="10" bindtap="handleReportQtyQuick">10 台</view>
+    </view>
+
+    <view class="sheet__tips">
+      报工后按 BOM 自动扣减各物料库存，并生成一条「领料」出库记录；物料不足时会整单拒绝。
+    </view>
+    <view class="sheet__bottom"></view>
+  </view>
+</view>
+
+<!-- ==================== 采购清单弹层 ==================== -->
+<view class="mask" wx:if="{{showPurchase}}" bindtap="closePurchase"></view>
+<view class="sheet" wx:if="{{showPurchase}}" catchtap="noop">
+  <view class="sheet__head">
+    <text class="sheet__cancel" bindtap="closePurchase">关闭</text>
+    <text class="sheet__title">采购清单</text>
+    <text class="sheet__save" bindtap="handlePurchaseCopy">复制</text>
+  </view>
+
+  <scroll-view class="sheet__body" scroll-y>
+    <view class="purchase-item" wx:for="{{analysis.shorts}}" wx:key="goodsId">
+      <view class="purchase-item__main">
+        <view class="purchase-item__title">{{item.title}}</view>
+        <view class="purchase-item__meta">{{item.sku}} · 库存 {{item.stock}}{{item.unit}}</view>
+      </view>
+      <view class="purchase-item__right">
+        <view class="purchase-item__qty">+{{item.gap}}{{item.unit}}</view>
+        <view class="purchase-item__amount">¥{{item.amount}}</view>
+      </view>
+    </view>
+
+    <view class="purchase-total">
+      <text>共 {{analysis.shorts.length}} 种物料</text>
+      <text class="purchase-total__amount">预计 ¥{{summary.purchaseAmount}}</text>
+    </view>
+
+    <view class="sheet__tips">金额按物料单价估算，实际以采购报价为准</view>
+    <view class="sheet__bottom"></view>
+  </scroll-view>
+</view>

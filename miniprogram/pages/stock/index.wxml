@@ -7,7 +7,7 @@
       <input
         class="search-box__input"
         value="{{keyword}}"
-        placeholder="搜索商品名称 / SKU / 条码"
+        placeholder="搜索商品名称 / SKU / 条码 / 供应商"
         placeholder-class="search-box__placeholder"
         confirm-type="search"
         bindinput="handleKeywordInput"

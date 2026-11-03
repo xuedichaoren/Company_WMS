@@ -1,0 +1,475 @@
+/* pages/task/index.wxss —— 生产任务与齐套分析 */
+
+/* ==================== 任务卡 ==================== */
+.task-card {
+  margin: 24rpx 24rpx 0;
+  padding: 28rpx 26rpx;
+  border-radius: var(--radius-card);
+  background: var(--color-card);
+  box-shadow: 0 8rpx 28rpx rgba(31, 42, 68, 0.06);
+}
+
+.task-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.task-card__title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-card__version-row {
+  display: flex;
+  align-items: center;
+}
+
+.task-card__version {
+  font-size: 40rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+.task-card__badge {
+  margin-left: 14rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 8rpx;
+  font-size: 21rpx;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.task-card__badge--done {
+  color: var(--color-success);
+  background: var(--color-success-light);
+}
+
+.task-card__name {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
+.task-card__switch {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  padding: 10rpx 22rpx;
+  border-radius: 999rpx;
+  font-size: 23rpx;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.task-card__switch--hover {
+  opacity: 0.7;
+}
+
+.task-card__ops {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+
+.task-card__more {
+  width: 52rpx;
+  height: 42rpx;
+  margin-left: 10rpx;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  line-height: 38rpx;
+  text-align: center;
+  color: var(--color-text-secondary);
+  background: #f2f4f9;
+}
+
+.task-card__meta {
+  margin-top: 14rpx;
+  font-size: 21rpx;
+  color: var(--color-text-muted);
+}
+
+/* 进度条 */
+.progress {
+  margin-top: 24rpx;
+}
+
+.progress__bar {
+  height: 12rpx;
+  border-radius: 999rpx;
+  overflow: hidden;
+  background: #eef1f7;
+}
+
+.progress__fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #2f6bff 0%, #5c8dff 100%);
+  transition: width 0.3s ease;
+}
+
+.progress__text {
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+}
+
+/* 关键指标 */
+.kpi-row {
+  display: flex;
+  margin-top: 22rpx;
+  padding: 20rpx 0;
+  border-radius: 20rpx;
+  background: #f8faff;
+}
+
+.kpi {
+  flex: 1;
+  text-align: center;
+}
+
+.kpi + .kpi {
+  border-left: 1rpx solid #e6ebf7;
+}
+
+.kpi__value {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-primary);
+}
+
+.kpi--danger .kpi__value {
+  color: var(--color-danger);
+}
+
+.kpi--warning .kpi__value {
+  color: var(--color-warning);
+}
+
+.kpi__label {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  color: var(--color-text-muted);
+}
+
+/* 提示条 */
+.tip {
+  margin-top: 20rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 14rpx;
+  font-size: 23rpx;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  background: #f4f6fb;
+}
+
+.tip--ok {
+  color: var(--color-success);
+  background: var(--color-success-light);
+}
+
+.tip--danger {
+  color: var(--color-danger);
+  background: var(--color-danger-light);
+}
+
+.tip--warning {
+  color: var(--color-warning);
+  background: var(--color-warning-light);
+}
+
+/* ==================== 无任务 ==================== */
+.task-empty {
+  margin: 24rpx;
+  padding: 60rpx 32rpx;
+  border-radius: var(--radius-card);
+  text-align: center;
+  background: var(--color-card);
+  box-shadow: 0 8rpx 28rpx rgba(31, 42, 68, 0.06);
+}
+
+.task-empty__title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.task-empty__text {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: var(--color-text-muted);
+}
+
+.task-empty__btn {
+  margin: 36rpx auto 0;
+  width: 420rpx;
+}
+
+/* ==================== 筛选 ==================== */
+.chip-bar--scroll {
+  padding: 0 24rpx;
+}
+
+.chip__count {
+  margin-left: 8rpx;
+  font-size: 21rpx;
+  opacity: 0.75;
+}
+
+/* ==================== 物料列表 ==================== */
+.list {
+  padding: 8rpx 24rpx 0;
+}
+
+.mat {
+  margin-top: 16rpx;
+  padding: 24rpx 24rpx 22rpx;
+  border-radius: 20rpx;
+  background: var(--color-card);
+  border-left: 6rpx solid #dfe5f0;
+  box-shadow: 0 6rpx 20rpx rgba(31, 42, 68, 0.05);
+}
+
+.mat--short {
+  border-left-color: var(--color-danger);
+}
+
+.mat--warn {
+  border-left-color: var(--color-warning);
+}
+
+.mat--ok {
+  border-left-color: var(--color-success);
+}
+
+.mat--hover {
+  opacity: 0.75;
+}
+
+.mat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mat__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.mat__meta {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: var(--color-text-muted);
+}
+
+.mat__nums {
+  position: relative;
+  display: flex;
+  margin-top: 18rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx dashed var(--color-border);
+}
+
+.mat__num {
+  flex: 1;
+  text-align: center;
+}
+
+.mat__num-value {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+.mat__num--danger .mat__num-value {
+  color: var(--color-danger);
+}
+
+.mat__num-label {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: var(--color-text-muted);
+}
+
+/* ==================== 底部按钮 ==================== */
+.footer-bar__ghost {
+  flex-shrink: 0;
+  margin-right: 16rpx;
+}
+
+/* ==================== 采购清单 ==================== */
+.purchase-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.purchase-item__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.purchase-item__title {
+  font-size: 27rpx;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.purchase-item__meta {
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  color: var(--color-text-muted);
+}
+
+.purchase-item__right {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  text-align: right;
+}
+
+.purchase-item__qty {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.purchase-item__amount {
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  color: var(--color-text-muted);
+}
+
+.purchase-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 26rpx 0 6rpx;
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
+.purchase-total__amount {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--color-danger);
+}
+
+/* 弹层内控件补充 */
+.sheet__value-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.stepper__unit {
+  padding-right: 22rpx;
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
+/* ==================== 任务列表弹层 ==================== */
+.tl {
+  max-height: 58vh;
+  padding: 8rpx 32rpx 0;
+  box-sizing: border-box;
+}
+
+.tl__row {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.tl__row--hover {
+  background: #f8faff;
+}
+
+.tl__row--active {
+  background: #f5f8ff;
+  border-radius: 16rpx;
+}
+
+.tl__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.tl__title-row {
+  display: flex;
+  align-items: center;
+}
+
+.tl__version {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.tl__badge {
+  margin-left: 12rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 8rpx;
+  font-size: 20rpx;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.tl__badge--done {
+  color: var(--color-success);
+  background: var(--color-success-light);
+}
+
+.tl__current {
+  margin-left: 12rpx;
+  font-size: 20rpx;
+  color: var(--color-text-muted);
+}
+
+.tl__meta {
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: var(--color-text-muted);
+}
+
+.tl__del {
+  flex-shrink: 0;
+  margin-left: 18rpx;
+  padding: 10rpx 20rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: var(--color-danger);
+  background: var(--color-danger-light);
+}
+
+.tl__del--hover {
+  opacity: 0.65;
+}
+
+.tl__empty {
+  padding: 60rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--color-text-muted);
+}
+
+.tl__foot {
+  padding: 20rpx 32rpx 8rpx;
+}
+
+.tl__create {
+  width: 100%;
+}

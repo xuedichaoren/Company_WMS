@@ -286,6 +286,93 @@
   color: var(--color-text-muted);
 }
 
+/* ==================== 当前任务 ==================== */
+.task-section--hover {
+  opacity: 0.88;
+}
+
+.task-line {
+  display: flex;
+  align-items: center;
+  margin-top: 22rpx;
+}
+
+.task-line__version {
+  font-size: 38rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+.task-line__qty {
+  margin-left: 12rpx;
+  font-size: 25rpx;
+  color: var(--color-text-secondary);
+}
+
+.task-line__tag {
+  margin-left: auto;
+}
+
+.task-progress {
+  height: 12rpx;
+  margin-top: 18rpx;
+  border-radius: 999rpx;
+  overflow: hidden;
+  background: #eef1f7;
+}
+
+.task-progress__fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #2f6bff 0%, #5c8dff 100%);
+}
+
+.task-progress__text {
+  margin-top: 10rpx;
+  font-size: 21rpx;
+  color: var(--color-text-muted);
+}
+
+.task-kpis {
+  display: flex;
+  margin-top: 18rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx dashed var(--color-border);
+}
+
+.task-kpi {
+  flex: 1;
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+}
+
+.task-kpi__strong,
+.task-kpi__danger,
+.task-kpi__warning {
+  margin: 0 4rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.task-kpi__strong {
+  color: var(--color-primary);
+}
+
+.task-kpi__danger {
+  color: var(--color-danger);
+}
+
+.task-kpi__warning {
+  color: var(--color-warning);
+}
+
+.task-empty-line {
+  margin-top: 18rpx;
+  font-size: 24rpx;
+  color: var(--color-text-muted);
+}
+
 /* 底部安全区 */
 .safe-bottom {
   height: 24rpx;

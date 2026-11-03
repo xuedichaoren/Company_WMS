@@ -1,0 +1,266 @@
+<!-- BOM 维护页：机型版本 / 物料清单 / 粘贴导入 -->
+<view class="screen screen--with-footer">
+  <!-- 顶部版本切换 -->
+  <view class="header">
+    <view class="header__title">BOM 维护</view>
+    <view class="header__sub">按机型版本维护物料与单台用量，生产任务据此计算齐套</view>
+
+    <scroll-view class="chip-bar chip-bar--scroll" scroll-x show-scrollbar="{{false}}">
+      <view
+        class="chip {{activeId === item.id ? 'chip--active' : ''}}"
+        wx:for="{{boms}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        hover-class="chip--hover"
+        bindtap="handleVersionTap"
+      >
+        {{item.version}}
+      </view>
+      <view class="chip chip--add" hover-class="chip--hover" bindtap="handleAddVersion">＋ 新版本</view>
+    </scroll-view>
+  </view>
+
+  <!-- 当前版本信息 -->
+  <view class="card" wx:if="{{bom}}">
+    <view class="card__head">
+      <view class="ver">
+        <text class="ver__version">{{bom.version}}</text>
+        <text class="ver__name">{{bom.name}}</text>
+      </view>
+      <text class="card__link" bindtap="handleEditVersion">编辑</text>
+    </view>
+
+    <view class="ver__meta">
+      {{bom.itemCount}} 种物料 · 单台合计 {{bom.totalQty}} 个/件/套
+    </view>
+    <view class="ver__remark" wx:if="{{bom.remark}}">{{bom.remark}}</view>
+
+    <view class="ver__actions">
+      <view class="btn btn--ghost btn--small ver__btn" hover-class="btn--hover" bindtap="handleImportOpen">
+        粘贴导入
+      </view>
+      <view class="btn btn--primary btn--small ver__btn" hover-class="btn--hover" bindtap="handleGoTask">
+        看齐套结果
+      </view>
+    </view>
+  </view>
+
+  <!-- 无版本 -->
+  <view class="card empty-bom" wx:else>
+    <view class="empty-bom__title">还没有 BOM 版本</view>
+    <view class="empty-bom__text">先新增一个机型版本（如 V3.1），再往里添加物料</view>
+    <view class="btn btn--primary empty-bom__btn" hover-class="btn--hover" bindtap="handleAddVersion">
+      新增版本
+    </view>
+  </view>
+
+  <!-- 物料清单 -->
+  <block wx:if="{{bom}}">
+    <view class="list-title">
+      <text>物料清单</text>
+      <text class="list-title__hint">点击可改用量或移除</text>
+    </view>
+
+    <view class="list">
+      <view
+        class="row"
+        wx:for="{{bom.items}}"
+        wx:key="goodsId"
+        data-id="{{item.goodsId}}"
+        hover-class="row--hover"
+        bindtap="handleItemTap"
+      >
+        <view class="row__main">
+          <view class="row__title">{{item.title}}</view>
+          <view class="row__meta">{{item.sku}}<text wx:if="{{item.spec}}"> · {{item.spec}}</text></view>
+        </view>
+        <view class="row__nums">
+          <view class="row__qty">×{{item.qty}}</view>
+          <view class="row__stock">库存 {{item.stock}}{{item.unit}}</view>
+        </view>
+      </view>
+
+      <view wx:if="{{bom.items.length === 0}}" class="empty-state">
+        <text class="empty-state__text">该版本还没有物料，点下方按钮添加</text>
+      </view>
+    </view>
+  </block>
+
+  <view class="safe-bottom"></view>
+</view>
+
+<!-- 底部操作栏 -->
+<view class="footer-bar" wx:if="{{bom}}">
+  <view class="footer-bar__row">
+    <view class="btn btn--primary btn--block" hover-class="btn--hover" bindtap="handleAddItem">
+      ＋ 添加物料
+    </view>
+  </view>
+</view>
+
+<!-- ==================== 版本弹层 ==================== -->
+<view class="mask" wx:if="{{showBomEditor}}" bindtap="closeBomEditor"></view>
+<view class="sheet" wx:if="{{showBomEditor}}" catchtap="noop">
+  <view class="sheet__head">
+    <text class="sheet__cancel" bindtap="closeBomEditor">取消</text>
+    <text class="sheet__title">{{bomEditorTitle}}</text>
+    <text class="sheet__save" bindtap="handleBomSave">保存</text>
+  </view>
+
+  <scroll-view class="sheet__body" scroll-y>
+    <view class="sheet__row">
+      <text class="sheet__label">版本号<text class="sheet__req">*</text></text>
+      <input
+        class="sheet__input"
+        value="{{bomForm.version}}"
+        placeholder="如 V3.1"
+        placeholder-class="sheet__placeholder"
+        data-field="version"
+        bindinput="handleBomFieldInput"
+      />
+    </view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">版本名称</text>
+      <input
+        class="sheet__input"
+        value="{{bomForm.name}}"
+        placeholder="如 机器人头部机芯 V3.1"
+        placeholder-class="sheet__placeholder"
+        data-field="name"
+        bindinput="handleBomFieldInput"
+      />
+    </view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">说明</text>
+      <input
+        class="sheet__input"
+        value="{{bomForm.remark}}"
+        placeholder="如 双电机闭环版本"
+        placeholder-class="sheet__placeholder"
+        data-field="remark"
+        bindinput="handleBomFieldInput"
+      />
+    </view>
+
+    <view class="sheet__danger" wx:if="{{bomForm.id}}" bindtap="handleBomDelete">
+      删除该版本
+    </view>
+
+    <view class="sheet__bottom"></view>
+  </scroll-view>
+</view>
+
+<!-- ==================== 物料弹层 ==================== -->
+<view class="mask" wx:if="{{showItemEditor}}" bindtap="closeItemEditor"></view>
+<view class="sheet" wx:if="{{showItemEditor}}" catchtap="noop">
+  <view class="sheet__head">
+    <text class="sheet__cancel" bindtap="closeItemEditor">取消</text>
+    <text class="sheet__title">BOM 物料</text>
+    <text class="sheet__save" bindtap="handleItemSave">保存</text>
+  </view>
+
+  <scroll-view class="sheet__body" scroll-y>
+    <!-- 已选物料 -->
+    <block wx:if="{{itemGoods}}">
+      <view class="picked">
+        <view class="picked__head">
+          <text class="picked__title">{{itemGoods.title}}</text>
+          <text class="card__link" bindtap="handleReselectGoods">更换</text>
+        </view>
+        <view class="picked__meta">{{itemGoods.sku}}<text wx:if="{{itemGoods.spec}}"> · {{itemGoods.spec}}</text></view>
+        <view class="picked__row">
+          <text class="picked__label">当前库存</text>
+          <text class="picked__value">{{itemGoods.stock}}{{itemGoods.unit}}</text>
+        </view>
+      </view>
+
+      <view class="sheet__row">
+        <text class="sheet__label">单台用量<text class="sheet__req">*</text></text>
+        <view class="stepper">
+          <view class="stepper__btn" hover-class="stepper__btn--hover" data-step="-1" bindtap="handleItemQtyStep">−</view>
+          <input
+            class="stepper__input"
+            type="number"
+            value="{{itemQty}}"
+            bindinput="handleItemQtyInput"
+          />
+          <view class="stepper__btn" hover-class="stepper__btn--hover" data-step="1" bindtap="handleItemQtyStep">+</view>
+        </view>
+      </view>
+
+      <view class="sheet__tips">即每生产 1 台机芯需要的数量</view>
+    </block>
+
+    <!-- 选择物料 -->
+    <block wx:else>
+      <view class="search-box sheet__search">
+        <view class="search-box__icon"></view>
+        <input
+          class="search-box__input"
+          value="{{keyword}}"
+          placeholder="搜索物料名称 / SKU / 条码 / 供应商"
+          placeholder-class="search-box__placeholder"
+          bindinput="handleKeywordInput"
+        />
+      </view>
+
+      <view class="sug">
+        <view
+          class="sug__item"
+          wx:for="{{candidates}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          hover-class="sug__item--hover"
+          bindtap="handleCandidateTap"
+        >
+          <view class="sug__main">
+            <view class="sug__title">{{item.title}}</view>
+            <view class="sug__meta">{{item.sku}} · {{item.spec}}</view>
+          </view>
+          <text class="sug__stock">{{item.stock}}{{item.unit}}</text>
+        </view>
+
+        <view wx:if="{{candidates.length === 0}}" class="empty-state">
+          <text class="empty-state__text">没有匹配的物料，可去「商品管理」新增</text>
+        </view>
+      </view>
+    </block>
+
+    <view class="sheet__bottom"></view>
+  </scroll-view>
+</view>
+
+<!-- ==================== 导入弹层 ==================== -->
+<view class="mask" wx:if="{{showImporter}}" bindtap="closeImporter"></view>
+<view class="sheet" wx:if="{{showImporter}}" catchtap="noop">
+  <view class="sheet__head">
+    <text class="sheet__cancel" bindtap="closeImporter">取消</text>
+    <text class="sheet__title">粘贴导入 BOM</text>
+    <text class="sheet__save" bindtap="handleImportSubmit">导入</text>
+  </view>
+
+  <scroll-view class="sheet__body" scroll-y>
+    <view class="import-tips">
+      每行一条，格式「物料编码 + 单台用量」，可直接从 Excel 复制两列粘贴进来：
+    </view>
+    <view class="import-demo">MT-3001 1
+MT-3006 2
+MT-3013 16</view>
+
+    <textarea
+      class="import-area"
+      value="{{importText}}"
+      placeholder="在此粘贴 BOM 内容"
+      placeholder-class="sheet__placeholder"
+      maxlength="-1"
+      bindinput="handleImportInput"
+    ></textarea>
+
+    <view class="sheet__tips">
+      已存在的物料会更新用量，新物料会自动追加；匹配不到的编码会在导入结果里列出。
+    </view>
+    <view class="sheet__bottom"></view>
+  </scroll-view>
+</view>

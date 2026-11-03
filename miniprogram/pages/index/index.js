@@ -88,6 +88,8 @@ Page({
       stats: []
     },
     records: [],
+    // 当前生产任务（来源：utils/store.js，含齐套摘要）
+    taskOverview: { task: null },
     // 快捷操作配置（静态，无需每次 setData）
     actions: ACTIONS
   },
@@ -128,7 +130,8 @@ Page({
         warehouseName: app.globalData.warehouse.name,
         stats: overview.stats
       },
-      records: store.listRecords({ limit: 5 })
+      records: store.listRecords({ limit: 5 }),
+      taskOverview: store.getTaskOverview()
     })
   },
 
@@ -151,7 +154,7 @@ Page({
         }
         wx.showModal({
           title: '重置演示数据',
-          content: '将清空本地商品与出入库记录，恢复初始演示数据，是否继续？',
+          content: '将清空本地物料、BOM、生产任务与出入库记录，恢复初始演示数据，是否继续？',
           confirmText: '重置',
           confirmColor: '#ef4444',
           success: (modalRes) => {
@@ -254,6 +257,13 @@ Page({
   },
 
   /**
+   * 点击「当前任务」卡片：进入生产任务与齐套分析页
+   */
+  handleTaskTap() {
+    wx.navigateTo({ url: '/pages/task/index' })
+  },
+
+  /**
    * 点击最近操作记录，弹窗查看详情
    */
   handleRecordTap(e) {
@@ -261,18 +271,23 @@ Page({
     const record = this.data.records[index]
     if (!record) return
 
+    const lines = [
+      `单号：${record.id}`,
+      `商品：${record.title}`,
+      `SKU：${record.sku}`,
+      `规格：${record.spec}`,
+      `数量：${record.quantity}${record.unit}`,
+      `库位：${record.location || '未设置'}`,
+      `操作人：${record.operator}`,
+      `时间：${record.time}`
+    ]
+    // 生产领料记录会带上具体领用明细
+    if (record.detailText) lines.push('', '领用物料：', record.detailText)
+    if (record.remark) lines.push(`备注：${record.remark}`)
+
     wx.showModal({
       title: `${record.typeText}详情`,
-      content: [
-        `单号：${record.id}`,
-        `商品：${record.title}`,
-        `SKU：${record.sku}`,
-        `规格：${record.spec}`,
-        `数量：${record.quantity}${record.unit}`,
-        `库位：${record.location}`,
-        `操作人：${record.operator}`,
-        `时间：${record.time}`
-      ].join('\n'),
+      content: lines.join('\n'),
       showCancel: false,
       confirmText: '知道了'
     })

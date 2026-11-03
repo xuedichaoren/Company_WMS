@@ -1,0 +1,87 @@
+<!-- 分类管理页：新增 / 重命名 / 删除商品分类 -->
+<view class="screen screen--with-footer">
+  <!-- 顶部 -->
+  <view class="header">
+    <view class="header__title">分类管理</view>
+    <view class="header__sub">分类同时用于商品与机芯物料，点分类可重命名或删除</view>
+  </view>
+
+  <!-- 使用说明 -->
+  <view class="card notice">
+    <view class="notice__title">怎么用</view>
+    <view class="notice__text">不需要的分类直接删除；如果该分类下还有商品，删除后这些商品会归到「{{fallbackName}}」，不会丢。</view>
+    <view class="notice__text">新增的分类会立刻出现在商品管理的筛选条和编辑弹层的分类选择里。</view>
+  </view>
+
+  <view class="list-title">
+    <text>全部分类</text>
+    <text class="list-title__hint">共 {{categories.length}} 个</text>
+  </view>
+
+  <view class="list">
+    <view
+      class="row"
+      wx:for="{{categories}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      hover-class="row--hover"
+      bindtap="handleCategoryTap"
+    >
+      <view class="row__main">
+        <view class="row__title">{{item.name}}</view>
+        <view class="row__meta">{{item.goodsCount ? item.goodsCount + ' 个商品 / 物料' : '暂无商品，可放心删除'}}</view>
+      </view>
+
+      <view class="row__ops">
+        <block wx:if="{{item.removable}}">
+          <text class="row__op" data-id="{{item.id}}" catchtap="handleEdit">重命名</text>
+          <text class="row__op row__op--danger" data-id="{{item.id}}" catchtap="handleDelete">删除</text>
+        </block>
+        <text wx:else class="tag tag--muted">系统保留</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>
+
+<!-- 底部操作栏 -->
+<view class="footer-bar">
+  <view class="footer-bar__row">
+    <view class="btn btn--primary btn--block" hover-class="btn--hover" bindtap="handleCreate">
+      ＋ 新增分类
+    </view>
+  </view>
+</view>
+
+<!-- ==================== 新增 / 重命名弹层 ==================== -->
+<view wx:if="{{showEditor}}" class="mask" bindtap="closeEditor"></view>
+<view wx:if="{{showEditor}}" class="sheet" catchtap="noop">
+  <view class="sheet__head">
+    <text class="sheet__cancel" bindtap="closeEditor">取消</text>
+    <text class="sheet__title">{{editorTitle}}</text>
+    <text class="sheet__save" bindtap="handleSave">保存</text>
+  </view>
+
+  <view class="sheet__body">
+    <view class="sheet__row">
+      <text class="sheet__label">分类名称<text class="sheet__req">*</text></text>
+      <input
+        class="sheet__input"
+        value="{{name}}"
+        focus="{{focus}}"
+        maxlength="12"
+        placeholder="如 机芯结构件"
+        placeholder-class="sheet__placeholder"
+        confirm-type="done"
+        bindinput="handleNameInput"
+        bindconfirm="handleSave"
+      />
+    </view>
+
+    <view class="sheet__tips">
+      最多 12 个字，重命名会同步更新该分类下所有商品与物料
+    </view>
+    <view class="sheet__bottom"></view>
+  </view>
+</view>

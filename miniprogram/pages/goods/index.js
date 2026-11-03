@@ -14,9 +14,10 @@ function emptyForm(category) {
     spec: '',
     sku: '',
     barCode: '',
-    category: category || store.CATEGORIES[0],
+    category: category || store.getDefaultCategory(),
     unit: '件',
     location: '',
+    supplier: '',
     stock: '',
     safeStock: '',
     price: ''
@@ -27,15 +28,29 @@ Page({
   data: {
     keyword: '',
     category: '全部',
-    categories: ['全部'].concat(store.CATEGORIES),
-    // 弹层里可选的分类（不含「全部」，避免商品被误存为「全部」）
-    formCategories: store.CATEGORIES,
+    // 筛选条：'全部' + 分类表；表单分类不含「全部」，避免商品被误存为「全部」
+    categories: ['全部'],
+    formCategories: [],
     goodsList: [],
     total: 0,
     // 编辑弹层
     showEditor: false,
     editorTitle: '新增商品',
-    form: emptyForm(),
+    // 初始值不读存储，等用户点「新增」时再由 emptyForm() 取默认分类
+    form: {
+      id: '',
+      title: '',
+      spec: '',
+      sku: '',
+      barCode: '',
+      category: '',
+      unit: '件',
+      location: '',
+      supplier: '',
+      stock: '',
+      safeStock: '',
+      price: ''
+    },
     // picker 选中下标
     categoryIndex: 0
   },
@@ -48,14 +63,22 @@ Page({
     this.refresh()
   },
 
-  /** 重新加载列表 */
+  /** 重新加载列表（分类可能已在分类管理页被增删，每次都要重新取） */
   refresh() {
+    const names = store.categoryNames()
+    const categories = ['全部'].concat(names)
+    // 当前筛选的分类若已被删除，回退到「全部」
+    const category = categories.indexOf(this.data.category) === -1 ? '全部' : this.data.category
+
     const goodsList = store.listGoods({
       keyword: this.data.keyword,
-      category: this.data.category
+      category
     })
 
     this.setData({
+      categories,
+      formCategories: names,
+      category,
       goodsList,
       total: store.listGoods({}).length
     })
@@ -82,9 +105,23 @@ Page({
     this.setData({ category }, () => this.refresh())
   },
 
+  /** 进入分类管理页，增删改分类 */
+  handleManageCategory() {
+    wx.navigateTo({
+      url: '/pages/category/index',
+      fail: () => {
+        wx.showToast({ title: '打开分类管理失败', icon: 'none' })
+      }
+    })
+  },
+
   /** 打开新增弹层 */
   handleCreate() {
-    const category = this.data.category === '全部' ? store.CATEGORIES[0] : this.data.category
+    // 当前筛选的分类可以直接沿用；在「全部」下则用默认分类
+    const category =
+      this.data.category === '全部'
+        ? this.data.formCategories[0] || store.FALLBACK_CATEGORY
+        : this.data.category
     this.setData({
       showEditor: true,
       editorTitle: '新增商品',
@@ -112,6 +149,7 @@ Page({
         category: goods.category,
         unit: goods.unit,
         location: goods.location,
+        supplier: goods.supplier || '',
         stock: `${goods.stock}`,
         safeStock: `${goods.safeStock}`,
         price: `${goods.price}`

@@ -33,6 +33,63 @@
     </view>
   </view>
 
+  <!-- ==================== 当前生产任务 ==================== -->
+  <view
+    class="section task-section"
+    wx:if="{{taskOverview.task}}"
+    hover-class="task-section--hover"
+    bindtap="handleTaskTap"
+  >
+    <view class="section__header">
+      <text class="section__title">当前任务</text>
+      <text class="section__more">齐套分析 ›</text>
+    </view>
+
+    <view class="task-line">
+      <text class="task-line__version">{{taskOverview.version}}</text>
+      <text class="task-line__qty">× {{taskOverview.planQty}} 台</text>
+      <text
+        class="tag {{taskOverview.canFinish ? 'tag--success' : 'tag--danger'}} task-line__tag"
+      >
+        {{taskOverview.canFinish ? '物料齐套' : '物料不足'}}
+      </text>
+    </view>
+
+    <view class="task-progress">
+      <view class="task-progress__fill" style="width: {{taskOverview.progress}}%;"></view>
+    </view>
+    <view class="task-progress__text">
+      已完工 {{taskOverview.doneQty}} / {{taskOverview.planQty}} 台
+    </view>
+
+    <view class="task-kpis">
+      <text class="task-kpi">
+        最多可做
+        <text class="task-kpi__strong">{{taskOverview.maxAssemble}}</text>
+        台
+      </text>
+      <text class="task-kpi">
+        缺料
+        <text class="task-kpi__danger">{{taskOverview.shortKinds}}</text>
+        种
+      </text>
+      <text class="task-kpi">
+        做完预警
+        <text class="task-kpi__warning">{{taskOverview.warnKinds}}</text>
+        种
+      </text>
+    </view>
+  </view>
+
+  <!-- 没有进行中的任务 -->
+  <view class="section task-section" wx:else hover-class="task-section--hover" bindtap="handleTaskTap">
+    <view class="section__header">
+      <text class="section__title">当前任务</text>
+      <text class="section__more">去创建 ›</text>
+    </view>
+    <view class="task-empty-line">暂无进行中的生产任务，点击创建并查看物料齐套</view>
+  </view>
+
   <!-- ==================== 快捷操作 ==================== -->
   <view class="section">
     <view class="section__header">

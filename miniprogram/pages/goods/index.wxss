@@ -52,6 +52,34 @@
   padding: 0 24rpx;
 }
 
+/* 分类条：左侧横向滚动，右侧固定「分类管理」入口 */
+.cat-bar {
+  display: flex;
+  align-items: flex-start;
+}
+
+.cat-bar__scroll {
+  flex: 1;
+  width: 0;
+  margin-top: 24rpx;
+}
+
+.cat-bar__manage {
+  flex-shrink: 0;
+  height: 60rpx;
+  line-height: 60rpx;
+  padding: 0 22rpx;
+  margin: 24rpx 24rpx 0 4rpx;
+  border-radius: 999rpx;
+  background: var(--color-primary-light);
+  font-size: 23rpx;
+  color: var(--color-primary);
+}
+
+.cat-bar__manage--hover {
+  opacity: 0.7;
+}
+
 /* ==================== 商品条目 ==================== */
 .list {
   padding: 8rpx 24rpx 0;
@@ -102,6 +130,20 @@
   margin-left: 14rpx;
   font-size: 22rpx;
   color: var(--color-text-secondary);
+}
+
+/* 供应商一行 */
+.item__supplier {
+  margin-top: 12rpx;
+  overflow: hidden;
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item__supplier--empty {
+  color: #c2c9d6;
 }
 
 .item__foot {
