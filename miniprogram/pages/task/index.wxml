@@ -42,18 +42,26 @@
       </view>
     </picker>
 
-    <!-- 任务金额：单台价格取自 BOM 维护页 -->
+    <!-- 任务金额：单价按每一单单独设置，改价只影响这一单 -->
     <view class="task-card__amount {{task.hasPrice ? '' : 'task-card__amount--empty'}}">
       <view class="task-card__amount-main">
         <text class="task-card__amount-label">任务总价</text>
         <text class="task-card__amount-value" wx:if="{{task.hasPrice}}">{{task.amountText}}</text>
         <text class="task-card__amount-value" wx:else>未设置价格</text>
+        <text class="task-card__amount-edit" bindtap="openPrice">
+          {{task.hasPrice ? '改价 ›' : '定价 ›'}}
+        </text>
       </view>
       <view class="task-card__amount-meta" wx:if="{{task.hasPrice}}">
-        单价 {{task.unitPriceText}} × {{task.planQty}} 台
+        本单单价 {{task.unitPriceText}} × {{task.planQty}} 台
         <text wx:if="{{task.doneQty}}"> · 已完工 {{task.doneAmountText}}</text>
       </view>
-      <view class="task-card__amount-meta" wx:else bindtap="handleGoBom">去 BOM 维护设置单台价格 ›</view>
+      <view class="task-card__amount-meta" wx:if="{{task.priceCustom}}">
+        {{task.version}} 版本价 {{task.bomPriceText}}，本单已单独定价
+      </view>
+      <view class="task-card__amount-meta" wx:if="{{!task.hasPrice}}">
+        点「定价」填本单成交价，不影响同版本其他任务
+      </view>
     </view>
 
     <!-- 收货信息：姓名 / 单位二选一，地址必填；点一下可修改 -->
@@ -337,6 +345,24 @@
       <view class="qty-quick__item" data-value="50" bindtap="handlePlanQtyQuick">50 台</view>
     </view>
 
+    <!-- 每一单的成交价可以不同，这里不填就沿用版本价 -->
+    <view class="sheet__row">
+      <text class="sheet__label">单台价格</text>
+      <input
+        class="sheet__input"
+        type="digit"
+        value="{{unitPriceInput}}"
+        placeholder="{{unitPricePlaceholder}}"
+        placeholder-class="sheet__placeholder"
+        bindinput="handleUnitPriceInput"
+      />
+      <text class="sheet__unit">元/台</text>
+    </view>
+    <view class="price-preview" wx:if="{{createAmountText}}">
+      本单总价 <text class="price-preview__value">{{createAmountText}}</text>
+      <text class="price-preview__hint">仅本单，不改版本价</text>
+    </view>
+
     <view class="sheet__row">
       <text class="sheet__label">交付日期<text class="sheet__req">*</text></text>
       <picker
@@ -418,6 +444,58 @@
     </view>
 
     <view class="sheet__tips">创建后自动按 BOM 计算齐套情况，并按交付日期排入任务优先级</view>
+    <view class="sheet__bottom"></view>
+  </scroll-view>
+</view>
+
+<!-- ==================== 本单价格弹层 ==================== -->
+<view class="mask" wx:if="{{showPrice}}" bindtap="closePrice"></view>
+<view class="sheet" wx:if="{{showPrice}}" catchtap="noop">
+  <view class="sheet__head">
+    <text class="sheet__cancel" bindtap="closePrice">取消</text>
+    <text class="sheet__title">本单单价</text>
+    <text class="sheet__save" bindtap="handlePriceSave">保存</text>
+  </view>
+
+  <scroll-view class="sheet__body" scroll-y>
+    <view class="price-head" wx:if="{{task}}">
+      <text class="price-head__title">{{task.version}} × {{task.planQty}} 台</text>
+      <text class="price-head__sub">{{task.id}} · {{task.receiverTitle || '未填收货人'}}</text>
+    </view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">单台价格</text>
+      <input
+        class="sheet__input"
+        type="digit"
+        value="{{priceInput}}"
+        placeholder="如 8600"
+        placeholder-class="sheet__placeholder"
+        focus="{{showPrice}}"
+        bindinput="handlePriceInput"
+      />
+      <text class="sheet__unit">元/台</text>
+    </view>
+
+    <view class="price-preview" wx:if="{{pricePreview}}">
+      本单总价 <text class="price-preview__value">{{pricePreview}}</text>
+    </view>
+    <view class="price-preview price-preview--muted" wx:else>
+      填写单台价格后自动算出本单总价
+    </view>
+
+    <view class="sheet__tips">
+      只影响这一单，{{task.version || '该版本'}} 的版本价（{{task.bomPriceText || '未设置'}}）与其他任务都不变。
+    </view>
+
+    <view
+      class="sheet__link-row"
+      wx:if="{{task.priceCustom}}"
+      bindtap="handlePriceReset"
+    >
+      想恢复版本价？<text class="sheet__link">按版本价 ¥{{task.bomPrice}}/台 重算</text>
+    </view>
+
     <view class="sheet__bottom"></view>
   </scroll-view>
 </view>

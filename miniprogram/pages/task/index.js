@@ -113,6 +113,10 @@ Page({
     dueDate: '',
     todayText: '',
     remark: '',
+    // 新建任务时的本单单价（留空 = 沿用版本价）
+    unitPriceInput: '',
+    unitPricePlaceholder: '默认按版本价',
+    createAmountText: '',
     // 新建任务时的收货信息（可先空着，建完在任务卡上再补）
     receiver: '',
     receiverCompany: '',
@@ -121,6 +125,10 @@ Page({
     // 收货信息编辑弹层
     showReceiver: false,
     receiverForm: { receiver: '', receiverCompany: '', receiverPhone: '', address: '' },
+    // 本单价格弹层
+    showPrice: false,
+    priceInput: '',
+    pricePreview: '',
     // 报工弹层
     showReporter: false,
     reportQty: '',
@@ -419,21 +427,26 @@ Page({
     if (index === -1) index = boms.findIndex((item) => item.version === currentVersion)
     if (index === -1) index = 0
 
-    this.setData({
-      showCreator: true,
-      boms,
-      bomNames: boms.map((item) => `${item.version} · ${item.name}`),
-      bomIndex: index,
-      presetVersion: '',
-      planQty: '20',
-      dueDate: defaultDue(),
-      remark: '',
-      // 收货信息不自动带上一次的值，避免给不同客户下单时误提交旧地址
-      receiver: '',
-      receiverCompany: '',
-      receiverPhone: '',
-      address: ''
-    })
+    this.setData(
+      {
+        showCreator: true,
+        boms,
+        bomNames: boms.map((item) => `${item.version} · ${item.name}`),
+        bomIndex: index,
+        presetVersion: '',
+        planQty: '20',
+        dueDate: defaultDue(),
+        remark: '',
+        // 单价留空 = 沿用版本价；填了只影响这一单
+        unitPriceInput: '',
+        // 收货信息不自动带上一次的值，避免给不同客户下单时误提交旧地址
+        receiver: '',
+        receiverCompany: '',
+        receiverPhone: '',
+        address: ''
+      },
+      () => this.syncCreateAmount()
+    )
   },
 
   /** 新建任务时沿用当前任务的收货信息（同一客户续单） */
@@ -477,22 +490,56 @@ Page({
   noop() {},
 
   handleBomChange(e) {
-    this.setData({ bomIndex: Number(e.detail.value) || 0 })
+    // 换版本后价格占位与本单总价要跟着变
+    this.setData({ bomIndex: Number(e.detail.value) || 0 }, () => this.syncCreateAmount())
+  },
+
+  /** 新建弹层：当前选中版本的版本价 */
+  creatorBomPrice() {
+    const bom = this.data.boms[this.data.bomIndex]
+    return bom ? Number(bom.price) || 0 : 0
+  },
+
+  /**
+   * 新建弹层：刷新价格占位提示与本单总价预览
+   * 单价留空时按版本价估算，填了就用填的值（只对这一单生效）
+   */
+  syncCreateAmount() {
+    const bom = this.data.boms[this.data.bomIndex]
+    const bomPrice = this.creatorBomPrice()
+    const typed = String(this.data.unitPriceInput || '').trim()
+    const price = typed ? Number(typed) : bomPrice
+    const qty = Number(this.data.planQty) || 0
+    const ok = isFinite(price) && price >= 0 && qty > 0
+
+    this.setData({
+      unitPricePlaceholder:
+        bomPrice > 0
+          ? `默认按 ${(bom && bom.version) || '版本'} 版本价 ${bomPrice} 元/台`
+          : '如 8600',
+      createAmountText: ok ? store.formatMoney(price * qty) : ''
+    })
+  },
+
+  handleUnitPriceInput(e) {
+    this.setData({ unitPriceInput: e.detail.value.replace(/[^\d.]/g, '') }, () =>
+      this.syncCreateAmount()
+    )
   },
 
   handlePlanQtyInput(e) {
-    this.setData({ planQty: e.detail.value.replace(/[^\d]/g, '') })
+    this.setData({ planQty: e.detail.value.replace(/[^\d]/g, '') }, () => this.syncCreateAmount())
   },
 
   handlePlanQtyStep(e) {
     const delta = Number(e.currentTarget.dataset.step) || 0
     const next = (Number(this.data.planQty) || 0) + delta
-    this.setData({ planQty: next > 0 ? `${next}` : '' })
+    this.setData({ planQty: next > 0 ? `${next}` : '' }, () => this.syncCreateAmount())
   },
 
   handlePlanQtyQuick(e) {
     const { value } = e.currentTarget.dataset
-    this.setData({ planQty: `${Number(value) || 0}` })
+    this.setData({ planQty: `${Number(value) || 0}` }, () => this.syncCreateAmount())
   },
 
   handleRemarkInput(e) {
@@ -546,6 +593,75 @@ Page({
     wx.showToast({ title: '收货信息已保存', icon: 'success' })
   },
 
+  // ============================================================
+  // 本单价格
+  // ============================================================
+
+  /** 打开本单定价弹层：带入当前这一单的单价 */
+  openPrice() {
+    const task = this.data.task
+    if (!task) return
+    this.setData(
+      {
+        showPrice: true,
+        priceInput: task.unitPrice ? `${task.unitPrice}` : '',
+        pricePreview: task.hasPrice ? task.amountText : ''
+      },
+      () => this.syncPricePreview()
+    )
+  },
+
+  closePrice() {
+    this.setData({ showPrice: false })
+  },
+
+  handlePriceInput(e) {
+    this.setData({ priceInput: e.detail.value.replace(/[^\d.]/g, '') }, () =>
+      this.syncPricePreview()
+    )
+  },
+
+  /** 弹层里实时算本单总价；留空则按版本价估算 */
+  syncPricePreview() {
+    const task = this.data.task
+    if (!task) return
+    const typed = String(this.data.priceInput || '').trim()
+    const price = typed ? Number(typed) : Number(task.bomPrice) || 0
+    const qty = Number(task.planQty) || 0
+    const ok = isFinite(price) && price >= 0 && qty > 0
+    this.setData({ pricePreview: ok ? store.formatMoney(price * qty) : '' })
+  },
+
+  /** 保存本单价格（只改这一单） */
+  handlePriceSave() {
+    const task = this.data.task
+    if (!task) return
+
+    const result = store.updateTaskPrice(task.id, this.data.priceInput)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+
+    this.setData({ showPrice: false }, () => this.refresh())
+    wx.showToast({ title: result.reset ? '已恢复版本价' : '本单价格已更新', icon: 'success' })
+  },
+
+  /** 恢复为版本价 */
+  handlePriceReset() {
+    const task = this.data.task
+    if (!task) return
+
+    const result = store.updateTaskPrice(task.id, '')
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+
+    this.setData({ showPrice: false }, () => this.refresh())
+    wx.showToast({ title: '已恢复版本价', icon: 'success' })
+  },
+
   /** 创建任务 */
   handleCreateSubmit() {
     const bom = this.data.boms[this.data.bomIndex]
@@ -564,6 +680,7 @@ Page({
     const result = store.saveTask({
       bomId: bom.id,
       planQty,
+      unitPrice: this.data.unitPriceInput,
       dueDate: this.data.dueDate,
       remark: this.data.remark,
       operator: user ? user.name : '张伟',

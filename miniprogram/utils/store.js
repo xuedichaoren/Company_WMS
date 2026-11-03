@@ -11,7 +11,7 @@ const STORAGE_KEY = 'wms_demo_state_v1'
 const SESSION_KEY = 'wms_demo_session_v1'
 
 /** 数据结构版本，用于存量数据迁移 */
-const SCHEMA_VERSION = 6
+const SCHEMA_VERSION = 7
 
 /**
  * 任务排序模式
@@ -659,6 +659,8 @@ function buildSeedTasks() {
       status: 'doing',
       operator: '张伟',
       remark: '首批试产',
+      // 本单成交价（演示：与版本价一致）
+      unitPrice: 8600,
       receiver: '陈志强',
       receiverCompany: '东莞市智泉机器人有限公司',
       receiverPhone: '13800138000',
@@ -679,6 +681,8 @@ function buildSeedTasks() {
       status: 'doing',
       operator: '李娜',
       remark: '客户补单',
+      // 本单成交价（演示：比版本价 7200 低 400，只影响这一单）
+      unitPrice: 6800,
       receiver: '王敏',
       receiverCompany: '',
       receiverPhone: '13612345678',
@@ -909,6 +913,16 @@ function migrateState(data) {
       }
     })
     if (patched) changed = true
+  })
+
+  // v6 → v7：任务增加本单单台价格。老任务按当前版本价格快照一次，
+  // 之后就与版本价格脱钩，改版本价不会再影响历史订单
+  ;(data.tasks || []).forEach((task) => {
+    if (typeof task.unitPrice !== 'number' || !isFinite(task.unitPrice)) {
+      const bom = (data.boms || []).find((item) => item.id === task.bomId)
+      task.unitPrice = bom ? Number(bom.price) || 0 : 0
+      changed = true
+    }
   })
 
   // v4 → v5：任务列表排序模式，默认按交付日期
@@ -1935,11 +1949,21 @@ function taskWeightOf(task) {
   return parseDayTime(task.dueDate) || task.createdAt || 0
 }
 
-/** 任务总价 = 该版本单台价格 × 计划台数 */
+/**
+ * 任务单台价格：以任务自己存的为准（每单价格可以不同），
+ * 老数据或未设置时退回版本价格
+ */
+function taskUnitPriceOf(task) {
+  if (task && typeof task.unitPrice === 'number' && isFinite(task.unitPrice)) {
+    return task.unitPrice
+  }
+  const bom = task ? getRawBom(task.bomId) : null
+  return bom ? Number(bom.price) || 0 : 0
+}
+
+/** 任务总价 = 该任务单台价格 × 计划台数 */
 function taskAmountOf(task) {
-  const bom = getRawBom(task.bomId)
-  const unitPrice = bom ? Number(bom.price) || 0 : 0
-  return unitPrice * (Number(task.planQty) || 0)
+  return taskUnitPriceOf(task) * (Number(task.planQty) || 0)
 }
 
 /** 当前排序模式：due（交付日期）/ amount（总价）/ created（下单时间）/ manual（手动） */
@@ -2018,8 +2042,9 @@ function decorateTask(task) {
     due.dueTip = '已完成'
   }
 
-  // 金额：单台价格取自 BOM 维护页的版本价格
-  const unitPrice = bom ? Number(bom.price) || 0 : 0
+  // 金额：单价以本任务为准（同一版本不同客户价格可以不同），版本价格只作参考
+  const unitPrice = taskUnitPriceOf(task)
+  const bomPrice = bom ? Number(bom.price) || 0 : 0
   const planQty = Number(task.planQty) || 0
   const doneQty = Number(task.doneQty) || 0
 
@@ -2043,6 +2068,10 @@ function decorateTask(task) {
     // 价格与金额
     unitPrice,
     unitPriceText: formatMoney(unitPrice),
+    // 版本参考价：与任务单价不同时页面提示「已单独定价」
+    bomPrice,
+    bomPriceText: formatMoney(bomPrice),
+    priceCustom: bomPrice !== unitPrice,
     amount: unitPrice * planQty,
     amountText: formatMoney(unitPrice * planQty),
     doneAmount: unitPrice * doneQty,
@@ -2205,6 +2234,31 @@ function setTaskDueDate(taskId, dueDate) {
   return { ok: true, task: decorateTask(task) }
 }
 
+/**
+ * 修改某一单的单台价格（不影响同版本的其他任务）
+ * 传空串表示恢复跟随版本价格
+ */
+function updateTaskPrice(taskId, price) {
+  const task = getRawTask(taskId)
+  if (!task) return { ok: false, message: '任务不存在' }
+
+  const text = String(price === undefined || price === null ? '' : price).trim()
+  if (!text) {
+    // 恢复默认：删掉本单价格，展示与计算都回到版本价格
+    delete task.unitPrice
+    persist()
+    return { ok: true, task: decorateTask(task), reset: true }
+  }
+
+  const parsed = parseMoney(text)
+  if (isNaN(parsed)) return { ok: false, message: '单台价格需为数字' }
+  if (parsed > 10000000) return { ok: false, message: '单台价格过大' }
+
+  task.unitPrice = parsed
+  persist()
+  return { ok: true, task: decorateTask(task) }
+}
+
 /** 字段清洗：去首尾空格并截断，避免超长文本把卡片撑坏 */
 function cutText(value, max) {
   const text = String(value === undefined || value === null ? '' : value).trim()
@@ -2293,6 +2347,15 @@ function saveTask(payload) {
 
   current.taskSeq = (current.taskSeq || 0) + 1
   const createdAt = Date.now()
+  // 每单可以单独定价：不填就沿用版本价格，填了只影响这一单
+  let unitPrice = Number(bom.price) || 0
+  const rawPrice = data.unitPrice
+  if (rawPrice !== undefined && rawPrice !== null && String(rawPrice).trim() !== '') {
+    const parsed = parseMoney(rawPrice)
+    if (isNaN(parsed)) return { ok: false, message: '单台价格需为数字' }
+    if (parsed > 10000000) return { ok: false, message: '单台价格过大' }
+    unitPrice = parsed
+  }
   // 交付日期必填，没选就默认 7 天后，保证按日期排序时这条任务有确定位置
   const dueDate = normalizeDay(data.dueDate) || defaultDueDate(createdAt)
   const task = {
@@ -2305,6 +2368,8 @@ function saveTask(payload) {
     status: 'doing',
     operator: data.operator || '张伟',
     remark: (data.remark || '').trim(),
+    // 本单单台成交价（元/台），与版本价格解耦，改价只影响这一单
+    unitPrice,
     // 收货信息：发货、送货时用
     receiver: receiver.receiver,
     receiverCompany: receiver.receiverCompany,
@@ -2462,6 +2527,9 @@ function finishTask(taskId) {
 module.exports = {
   FALLBACK_CATEGORY,
   STOCK_STATUS_TEXT,
+  // 金额格式化（页面做预览时用）
+  formatMoney,
+  parseMoney,
   // 数据变化订阅（跨页同步）
   subscribe,
   notifyChange,
@@ -2511,6 +2579,7 @@ module.exports = {
   moveTask,
   resetTaskOrder,
   setTaskDueDate,
+  updateTaskPrice,
   updateTaskReceiver,
   dueInfoOf,
   saveTask,

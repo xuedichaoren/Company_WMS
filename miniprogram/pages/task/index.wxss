@@ -797,3 +797,61 @@
 .tl__receiver--empty {
   color: var(--color-warning);
 }
+
+/* ==================== 本单价格 ==================== */
+.task-card__amount-edit {
+  margin-left: auto;
+  font-size: 22rpx;
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+.sheet__unit {
+  margin-left: 10rpx;
+  font-size: 23rpx;
+  color: var(--color-text-muted);
+}
+
+.price-head {
+  padding: 4rpx 0 20rpx;
+}
+
+.price-head__title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.price-head__sub {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: var(--color-text-muted);
+}
+
+.price-preview {
+  margin-top: 18rpx;
+  padding: 18rpx 22rpx;
+  border-radius: 16rpx;
+  font-size: 23rpx;
+  color: var(--color-text-secondary);
+  background: #f5f8ff;
+}
+
+.price-preview--muted {
+  color: var(--color-text-muted);
+}
+
+.price-preview__value {
+  margin-left: 8rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.price-preview__hint {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  color: var(--color-text-muted);
+}

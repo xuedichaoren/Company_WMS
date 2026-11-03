@@ -102,7 +102,7 @@
             </view>
             <view class="tcard__amount">
               <text class="tcard__amount-value">{{item.amountText}}</text>
-              <text class="tcard__amount-meta">{{item.unitPriceText}} × {{item.planQty}} 台</text>
+              <text class="tcard__amount-meta">本单 {{item.unitPriceText}} × {{item.planQty}} 台</text>
             </view>
           </view>
 
