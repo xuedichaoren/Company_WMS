@@ -27,6 +27,20 @@
       {{task.id}} · {{task.operator}} · {{task.time}}
     </view>
 
+    <!-- 下单日期：可手填（业务实际下单日），「按下单时间」排序就用它 -->
+    <picker
+      mode="date"
+      value="{{task.orderDate}}"
+      start="{{todayText}}"
+      bindchange="handleTaskOrderChange"
+    >
+      <view class="task-card__order">
+        <text class="task-card__due-label">下单日期</text>
+        <text class="task-card__due-date">{{task.orderDate || '未设置'}}</text>
+        <text class="task-card__due-edit">修改 ›</text>
+      </view>
+    </picker>
+
     <!-- 交付日期：点击日期直接改，改完按日期重新排优先级 -->
     <picker
       mode="date"
@@ -243,7 +257,7 @@
           <text class="tl__current" wx:if="{{item.id === taskId}}">当前</text>
         </view>
         <view class="tl__meta tl__meta--due tl__meta--{{item.dueLevel}}">
-          交付 {{item.dueDate || '未设置'}} · {{item.dueTip}}
+          下单 {{item.orderDate}} · 交付 {{item.dueDate || '未设置'}} · {{item.dueTip}}
         </view>
         <view class="tl__receiver" wx:if="{{item.hasReceiver}}">
           收货 {{item.receiverTitle || '未填收货人'}} · {{item.addressText || '未填地址'}}
@@ -361,6 +375,19 @@
     <view class="price-preview" wx:if="{{createAmountText}}">
       本单总价 <text class="price-preview__value">{{createAmountText}}</text>
       <text class="price-preview__hint">仅本单，不改版本价</text>
+    </view>
+
+    <view class="sheet__row">
+      <text class="sheet__label">下单日期</text>
+      <picker
+        mode="date"
+        value="{{orderDate}}"
+        start="{{todayText}}"
+        bindchange="handleOrderChange"
+        class="sheet__value-wrap"
+      >
+        <view class="sheet__value">{{orderDate || '请选择'}} ›</view>
+      </picker>
     </view>
 
     <view class="sheet__row">

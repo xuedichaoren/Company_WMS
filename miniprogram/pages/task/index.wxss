@@ -855,3 +855,13 @@
   font-size: 20rpx;
   color: var(--color-text-muted);
 }
+
+/* 下单日期行：比交付日期弱一档，避免抢视觉 */
+.task-card__order {
+  display: flex;
+  align-items: center;
+  margin-top: 10rpx;
+  padding: 10rpx 16rpx;
+  border-radius: 14rpx;
+  background: #f7f8fb;
+}

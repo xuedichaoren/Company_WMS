@@ -65,6 +65,11 @@ function defaultDue() {
   return dayText(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7))
 }
 
+/** 新建任务默认下单日期：今天（业务下单日可能更早，可手改） */
+function todayDay() {
+  return dayText(new Date())
+}
+
 /**
  * 任务列表：按优先级排序，进行中的带序号与可移动标记
  * 已完成的排在最后、不参与手动排序
@@ -111,6 +116,7 @@ Page({
     presetVersion: '',
     planQty: '20',
     dueDate: '',
+    orderDate: '',
     todayText: '',
     remark: '',
     // 新建任务时的本单单价（留空 = 沿用版本价）
@@ -141,7 +147,7 @@ Page({
   },
 
   onLoad(options) {
-    this.setData({ todayText: dayText(new Date()), dueDate: defaultDue() })
+    this.setData({ todayText: dayText(new Date()), dueDate: defaultDue(), orderDate: todayDay() })
     if (options && options.taskId) {
       this.setData({ taskId: options.taskId })
     }
@@ -436,6 +442,7 @@ Page({
         presetVersion: '',
         planQty: '20',
         dueDate: defaultDue(),
+        orderDate: todayDay(),
         remark: '',
         // 单价留空 = 沿用版本价；填了只影响这一单
         unitPriceInput: '',
@@ -467,6 +474,26 @@ Page({
   /** 新建任务：选择交付日期 */
   handleDueChange(e) {
     this.setData({ dueDate: e.detail.value })
+  },
+
+  /** 新建任务：选择下单日期（业务实际下单日，可早于今天录入） */
+  handleOrderChange(e) {
+    this.setData({ orderDate: e.detail.value })
+  },
+
+  /** 修改当前任务的下单日期：影响「按下单时间」排序 */
+  handleTaskOrderChange(e) {
+    const task = this.data.task
+    if (!task) return
+
+    const result = store.setTaskOrderDate(task.id, e.detail.value)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+
+    this.setData({ task: result.task }, () => this.refresh())
+    wx.showToast({ title: `下单日期已改为 ${result.task.orderDate}`, icon: 'none' })
   },
 
   /** 修改当前任务的交付日期（点任务卡上的日期直接选） */
@@ -682,6 +709,7 @@ Page({
       planQty,
       unitPrice: this.data.unitPriceInput,
       dueDate: this.data.dueDate,
+      orderDate: this.data.orderDate,
       remark: this.data.remark,
       operator: user ? user.name : '张伟',
       receiver: this.data.receiver,

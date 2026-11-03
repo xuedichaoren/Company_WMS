@@ -808,3 +808,15 @@
 .tcard__receiver--empty .tcard__receiver-text {
   color: var(--color-warning);
 }
+
+/* 交付 / 下单日期上下两行，金额右对齐 */
+.tcard__dates {
+  flex: 1;
+  min-width: 0;
+}
+
+.tcard__order {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  color: var(--color-text-muted);
+}

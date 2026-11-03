@@ -94,11 +94,14 @@
             <text class="tag tag--warning tcard__tag" wx:else>无 BOM</text>
           </view>
 
-          <!-- 交付日期 + 任务总价 -->
+          <!-- 交付日期 + 下单日期 + 任务总价 -->
           <view class="tcard__meta-row">
-            <view class="tcard__due tcard__due--{{item.dueLevel}}">
-              <text class="tcard__due-date">{{item.dueFull}}</text>
-              <text class="tcard__due-tip">{{item.dueTip}}</text>
+            <view class="tcard__dates">
+              <view class="tcard__due tcard__due--{{item.dueLevel}}">
+                <text class="tcard__due-date">{{item.dueFull}}</text>
+                <text class="tcard__due-tip">{{item.dueTip}}</text>
+              </view>
+              <view class="tcard__order">下单 {{item.orderShort}}</view>
             </view>
             <view class="tcard__amount">
               <text class="tcard__amount-value">{{item.amountText}}</text>

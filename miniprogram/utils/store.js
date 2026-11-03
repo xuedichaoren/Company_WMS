@@ -11,7 +11,7 @@ const STORAGE_KEY = 'wms_demo_state_v1'
 const SESSION_KEY = 'wms_demo_session_v1'
 
 /** 数据结构版本，用于存量数据迁移 */
-const SCHEMA_VERSION = 7
+const SCHEMA_VERSION = 8
 
 /**
  * 任务排序模式
@@ -23,7 +23,7 @@ const SCHEMA_VERSION = 7
 const TASK_SORT_MODES = [
   { key: 'due', label: '交付日期' },
   { key: 'amount', label: '任务总价' },
-  { key: 'created', label: '下单时间' },
+  { key: 'created', label: '下单日期' },
   { key: 'manual', label: '手动排序' }
 ]
 const DEFAULT_SORT_MODE = 'due'
@@ -665,6 +665,8 @@ function buildSeedTasks() {
       receiverCompany: '东莞市智泉机器人有限公司',
       receiverPhone: '13800138000',
       address: '广东省东莞市松山湖园区科技九路 6 号 A 栋 3 楼',
+      // 下单日期（演示：3 天前下的单，早于录入时间也不影响）
+      orderDate: dueOf(-3),
       dueDate: dueOf(5),
       sortWeight: parseDayTime(dueOf(5)),
       createdAt: now,
@@ -687,6 +689,8 @@ function buildSeedTasks() {
       receiverCompany: '',
       receiverPhone: '13612345678',
       address: '江苏省苏州市吴中区木渎镇金枫路 128 号 2 号厂房',
+      // 下单日期（演示：1 天前下的单）
+      orderDate: dueOf(-1),
       dueDate: dueOf(9),
       sortWeight: parseDayTime(dueOf(9)),
       createdAt: now - 60 * 1000,
@@ -921,6 +925,14 @@ function migrateState(data) {
     if (typeof task.unitPrice !== 'number' || !isFinite(task.unitPrice)) {
       const bom = (data.boms || []).find((item) => item.id === task.bomId)
       task.unitPrice = bom ? Number(bom.price) || 0 : 0
+      changed = true
+    }
+  })
+
+  // v7 → v8：任务增加手填的下单日期，老任务按录入时间当天补齐
+  ;(data.tasks || []).forEach((task) => {
+    if (!parseDayTime(task.orderDate)) {
+      task.orderDate = dayKey(new Date(task.createdAt || Date.now()))
       changed = true
     }
   })
@@ -1943,6 +1955,17 @@ function getRawTask(taskId) {
   return loadState().tasks.find((item) => item.id === taskId) || null
 }
 
+/**
+ * 下单时间：优先用手填的下单日期（业务上的实际下单日，可以早于录入日），
+ * 老数据没有就退回录入时间并归到当天 0 点，保证与日期同量纲
+ */
+function orderTimeOf(task) {
+  const day = parseDayTime(task.orderDate)
+  if (day) return day
+  const created = new Date(task.createdAt || 0)
+  return new Date(created.getFullYear(), created.getMonth(), created.getDate()).getTime()
+}
+
 /** 排序权重：手动排序用的顺序值，没调过就退回交付日期 */
 function taskWeightOf(task) {
   if (typeof task.sortWeight === 'number' && isFinite(task.sortWeight)) return task.sortWeight
@@ -1990,7 +2013,8 @@ function compareTaskOrder(a, b) {
   if (mode === 'amount') {
     diff = taskAmountOf(b) - taskAmountOf(a)
   } else if (mode === 'created') {
-    diff = (a.createdAt || 0) - (b.createdAt || 0)
+    // 按手填的下单日期，同一天再按录入时间，保证顺序稳定
+    diff = orderTimeOf(a) - orderTimeOf(b)
   } else if (mode === 'manual') {
     diff = taskWeightOf(a) - taskWeightOf(b)
   } else {
@@ -2053,6 +2077,10 @@ function decorateTask(task) {
     // 同版本可能有多条任务，用单号尾号区分
     idShort: String(task.id || '').slice(-2),
     remarkText: task.remark || '',
+    // 下单日期：手填优先，没填就按录入时间当天
+    orderDate: task.orderDate || dayKey(new Date(task.createdAt || Date.now())),
+    // 首页卡片位置紧，只显示月-日
+    orderShort: (task.orderDate || dayKey(new Date(task.createdAt || Date.now()))).slice(5),
     // 收货信息展示字段
     receiverName: task.receiver || '',
     receiverCompanyText: task.receiverCompany || '',
@@ -2228,8 +2256,33 @@ function setTaskDueDate(taskId, dueDate) {
   const day = normalizeDay(dueDate)
   if (!day) return { ok: false, message: '请选择交付日期' }
 
+  // 交付不能早于下单，避免出现「先交付后下单」的怪数据
+  const orderDay = task.orderDate || dayKey(new Date(task.createdAt || Date.now()))
+  if (parseDayTime(day) < parseDayTime(orderDay)) {
+    return { ok: false, message: `交付日期不能早于下单日期（${orderDay}）` }
+  }
+
   task.dueDate = day
   task.sortWeight = parseDayTime(day)
+  persist()
+  return { ok: true, task: decorateTask(task) }
+}
+
+/**
+ * 修改下单日期（业务上的实际下单日，可以早于录入时间）
+ * 「按下单时间」排序用的就是这个日期
+ */
+function setTaskOrderDate(taskId, orderDate) {
+  const task = getRawTask(taskId)
+  if (!task) return { ok: false, message: '任务不存在' }
+
+  const day = normalizeDay(orderDate)
+  if (!day) return { ok: false, message: '请选择下单日期' }
+  if (parseDayTime(day) > parseDayTime(task.dueDate)) {
+    return { ok: false, message: `下单日期不能晚于交付日期（${task.dueDate}）` }
+  }
+
+  task.orderDate = day
   persist()
   return { ok: true, task: decorateTask(task) }
 }
@@ -2358,6 +2411,11 @@ function saveTask(payload) {
   }
   // 交付日期必填，没选就默认 7 天后，保证按日期排序时这条任务有确定位置
   const dueDate = normalizeDay(data.dueDate) || defaultDueDate(createdAt)
+  // 下单日期：手填的实际下单日（可以早于录入日），不填按今天
+  const orderDate = normalizeDay(data.orderDate) || dayKey(new Date(createdAt))
+  if (parseDayTime(orderDate) > parseDayTime(dueDate)) {
+    return { ok: false, message: '下单日期不能晚于交付日期' }
+  }
   const task = {
     id: makeTaskId(createdAt, current.taskSeq),
     bomId: bom.id,
@@ -2376,6 +2434,7 @@ function saveTask(payload) {
     receiverPhone: receiver.receiverPhone,
     address: receiver.address,
     dueDate,
+    orderDate,
     sortWeight: parseDayTime(dueDate),
     createdAt,
     finishedAt: 0,
@@ -2579,6 +2638,7 @@ module.exports = {
   moveTask,
   resetTaskOrder,
   setTaskDueDate,
+  setTaskOrderDate,
   updateTaskPrice,
   updateTaskReceiver,
   dueInfoOf,
