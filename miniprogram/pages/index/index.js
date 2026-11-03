@@ -17,6 +17,7 @@ const ACTIONS = [
   { key: 'inbound', label: '入库', icon: '入', color: '#16a34a', bg: '#e8f8ee' },
   { key: 'outbound', label: '出库', icon: '出', color: '#f97316', bg: '#fff2e8' },
   { key: 'stock', label: '库存查询', icon: '库', color: '#2f6bff', bg: '#e9f0ff' },
+  { key: 'bom', label: 'BOM 维护', icon: '料', color: '#0f766e', bg: '#e6f6f3' },
   { key: 'goods', label: '商品管理', icon: '商', color: '#7c3aed', bg: '#f1eafe' },
   { key: 'log', label: '操作日志', icon: '志', color: '#0891b2', bg: '#e6f7fa' }
 ]
@@ -30,6 +31,7 @@ const PAGE_ROUTES = {
   inbound: '/pages/inbound/index',
   outbound: '/pages/outbound/index',
   stock: '/pages/stock/index',
+  bom: '/pages/bom/index',
   goods: '/pages/goods/index',
   log: '/pages/log/index'
 }
@@ -40,6 +42,7 @@ const READY_PAGES = [
   '/pages/inbound/index',
   '/pages/outbound/index',
   '/pages/stock/index',
+  '/pages/bom/index',
   '/pages/goods/index',
   '/pages/log/index'
 ]
@@ -93,6 +96,8 @@ Page({
     detail: { title: '', rows: [], lines: [], remark: '' },
     // 全部进行中的生产任务（来源：utils/store.js，按优先级排序）
     taskBoard: { tasks: [], total: 0, overdueCount: 0, shortCount: 0 },
+    // 已维护的机型版本数量：为 0 时引导先去建 BOM，而不是直接下任务
+    bomCount: 0,
     // 快捷操作配置（静态，无需每次 setData）
     actions: ACTIONS
   },
@@ -144,7 +149,8 @@ Page({
         stats: overview.stats
       },
       records: store.listRecentOps({ limit: 5 }),
-      taskBoard: store.getTaskBoard()
+      taskBoard: store.getTaskBoard(),
+      bomCount: store.listBoms().length
     })
   },
 
@@ -282,6 +288,16 @@ Page({
   /** 进入任务页管理任务（新建 / 排序 / 改交付日期） */
   handleTaskManage() {
     wx.navigateTo({ url: '/pages/task/index' })
+  },
+
+  /**
+   * 任务区空态：还没维护机型 BOM 时先去 BOM 维护，
+   * 已有 BOM 则去新建生产任务（先有 BOM、再下任务的正确顺序）
+   */
+  handleTaskEmptyTap() {
+    wx.navigateTo({
+      url: this.data.bomCount ? '/pages/task/index' : '/pages/bom/index'
+    })
   },
 
   /**

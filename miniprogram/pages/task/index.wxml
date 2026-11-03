@@ -269,6 +269,11 @@
       </picker>
     </view>
 
+    <!-- BOM 是生产任务的前置数据，这里给个直达入口，不用再绕回任务页 -->
+    <view class="sheet__link-row" bindtap="handleGoBomCreate">
+      没有要生产的机型？<text class="sheet__link">＋ 去 BOM 维护新增版本</text>
+    </view>
+
     <view class="sheet__row">
       <text class="sheet__label">计划数量<text class="sheet__req">*</text></text>
       <view class="stepper">

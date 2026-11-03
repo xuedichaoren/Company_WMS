@@ -339,8 +339,15 @@ Page({
     })
   },
 
-  /** 去生产任务页看齐套结果 */
+  /** 用当前版本去下生产任务：带上版本号，任务页直接打开新建弹层并选中该版本 */
   handleGoTask() {
-    wx.navigateTo({ url: '/pages/task/index' })
+    const bom = this.data.bom
+    if (!bom) {
+      wx.navigateTo({ url: '/pages/task/index' })
+      return
+    }
+    wx.navigateTo({
+      url: `/pages/task/index?version=${encodeURIComponent(bom.version)}`
+    })
   }
 })

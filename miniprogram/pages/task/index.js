@@ -98,6 +98,8 @@ Page({
     boms: [],
     bomNames: [],
     bomIndex: 0,
+    // 从 BOM 页带过来的版本号：新建任务时默认选中它
+    presetVersion: '',
     planQty: '20',
     dueDate: '',
     todayText: '',
@@ -118,6 +120,17 @@ Page({
     if (options && options.taskId) {
       this.setData({ taskId: options.taskId })
     }
+    // 从 BOM 维护页「用该版本下任务」进来：预选版本，并自动打开新建弹层
+    if (options && options.version) {
+      let version = options.version
+      try {
+        version = decodeURIComponent(version)
+      } catch (err) {
+        // 已经是解码后的明文，直接用
+      }
+      this.setData({ presetVersion: version })
+      this.autoCreate = true
+    }
     this.refresh()
   },
 
@@ -125,6 +138,10 @@ Page({
     // 物料库存、BOM、交付日期可能在其他页面被改动，返回时按本地缓存重读并重新分析
     store.reload()
     this.refresh()
+    if (this.autoCreate) {
+      this.autoCreate = false
+      this.handleCreate()
+    }
   },
 
   onPullDownRefresh() {
@@ -375,8 +392,11 @@ Page({
       return
     }
 
+    // 优先用 BOM 页带过来的版本，其次是当前任务的版本
+    const preset = this.data.presetVersion
     const currentVersion = this.data.task ? this.data.task.version : ''
-    let index = boms.findIndex((item) => item.version === currentVersion)
+    let index = preset ? boms.findIndex((item) => item.version === preset) : -1
+    if (index === -1) index = boms.findIndex((item) => item.version === currentVersion)
     if (index === -1) index = 0
 
     this.setData({
@@ -384,6 +404,7 @@ Page({
       boms,
       bomNames: boms.map((item) => `${item.version} · ${item.name}`),
       bomIndex: index,
+      presetVersion: '',
       planQty: '20',
       dueDate: defaultDue(),
       remark: ''
@@ -645,6 +666,13 @@ Page({
 
   handleGoBom() {
     wx.navigateTo({ url: '/pages/bom/index' })
+  },
+
+  /** 新建任务弹层里跳到 BOM 维护：先收起弹层，回来重新打开就能选到新版本 */
+  handleGoBomCreate() {
+    this.setData({ showCreator: false }, () => {
+      wx.navigateTo({ url: '/pages/bom/index' })
+    })
   },
 
   handleGoStock() {

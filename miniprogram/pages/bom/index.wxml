@@ -40,7 +40,7 @@
         粘贴导入
       </view>
       <view class="btn btn--primary btn--small ver__btn" hover-class="btn--hover" bindtap="handleGoTask">
-        看齐套结果
+        用该版本下任务
       </view>
     </view>
   </view>

@@ -40,9 +40,8 @@
       <text class="section__more" bindtap="handleTaskManage" wx:if="{{taskBoard.total}}">
         {{taskBoard.total}} 个进行中 · 管理 ›
       </text>
-      <text class="section__more" bindtap="handleTaskManage" wx:else>新建 ›</text>
+      <text class="section__more" bindtap="handleTaskEmptyTap" wx:else>新建 ›</text>
     </view>
-
     <view class="task-list" wx:if="{{taskBoard.total}}">
       <view
         class="tcard tcard--{{item.dueLevel}}"
@@ -126,9 +125,15 @@
       </view>
     </view>
 
-    <!-- 没有进行中的任务 -->
-    <view class="task-empty-line" wx:else bindtap="handleTaskManage">
-      暂无进行中的生产任务，点击创建并查看物料齐套
+    <!-- 没有进行中的任务：没维护 BOM 时先去建 BOM，否则去新建任务 -->
+    <view class="task-empty" wx:else hover-class="task-empty--hover" bindtap="handleTaskEmptyTap">
+      <view class="task-empty__title">
+        {{bomCount ? '暂无进行中的生产任务' : '还没有机型 BOM'}}
+      </view>
+      <view class="task-empty__tip">
+        {{bomCount ? '新建任务后会自动按 BOM 计算物料齐套情况' : '先维护机型版本与物料清单，再下生产任务'}}
+      </view>
+      <view class="task-empty__btn">{{bomCount ? '＋ 新建生产任务' : '＋ 去维护 BOM'}}</view>
     </view>
   </view>
 

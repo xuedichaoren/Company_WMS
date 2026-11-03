@@ -164,6 +164,7 @@
 /* ==================== 快捷操作 ==================== */
 .action-grid {
   display: flex;
+  flex-wrap: wrap;
   margin-top: 26rpx;
 }
 
@@ -171,8 +172,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 20%;
-  padding: 6rpx 0;
+  width: 33.333%;
+  padding: 14rpx 0;
 }
 
 .action-item--hover {
@@ -518,10 +519,40 @@
   color: var(--color-warning);
 }
 
-.task-empty-line {
-  margin-top: 18rpx;
-  font-size: 24rpx;
+.task-empty {
+  margin-top: 20rpx;
+  padding: 34rpx 28rpx;
+  border: 1rpx dashed var(--color-border);
+  border-radius: 20rpx;
+  background: #fafbfe;
+  text-align: center;
+}
+
+.task-empty--hover {
+  opacity: 0.75;
+}
+
+.task-empty__title {
+  font-size: 27rpx;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.task-empty__tip {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
   color: var(--color-text-muted);
+}
+
+.task-empty__btn {
+  display: inline-block;
+  margin-top: 22rpx;
+  padding: 12rpx 32rpx;
+  border-radius: 999rpx;
+  font-size: 23rpx;
+  color: #fff;
+  background: var(--color-primary);
 }
 
 /* 底部安全区 */

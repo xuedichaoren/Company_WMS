@@ -441,6 +441,17 @@
   min-width: 0;
 }
 
+/* 机型版本下方的 BOM 维护直达入口 */
+.sheet__link-row {
+  padding: 18rpx 0 4rpx;
+  font-size: 23rpx;
+  color: var(--color-text-muted);
+}
+
+.sheet__link {
+  color: var(--color-primary);
+}
+
 .stepper__unit {
   padding-right: 22rpx;
   font-size: 24rpx;
