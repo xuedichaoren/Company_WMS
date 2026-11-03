@@ -70,6 +70,14 @@ function todayDay() {
   return dayText(new Date())
 }
 
+/** 指定日期往后 n 天，返回 YYYY-MM-DD */
+function addDays(day, n) {
+  const parts = String(day || '').split('-')
+  if (parts.length !== 3) return day
+  const base = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]) + n)
+  return dayText(base)
+}
+
 /**
  * 任务列表：按优先级排序，进行中的带序号与可移动标记
  * 已完成的排在最后、不参与手动排序
@@ -117,6 +125,8 @@ Page({
     planQty: '20',
     dueDate: '',
     orderDate: '',
+    // 用户是否手动改过交付日期（没改过时，下单日期变化会自动带出 +7 天）
+    dueTouched: false,
     todayText: '',
     remark: '',
     // 新建任务时的本单单价（留空 = 沿用版本价）
@@ -471,14 +481,35 @@ Page({
     })
   },
 
-  /** 新建任务：选择交付日期 */
+  /** 新建任务：选择交付日期（不能早于下单日期） */
   handleDueChange(e) {
-    this.setData({ dueDate: e.detail.value })
+    const value = e.detail.value
+    if (this.data.orderDate && value < this.data.orderDate) {
+      wx.showToast({ title: `交付日期不能早于下单日期（${this.data.orderDate}）`, icon: 'none' })
+      return
+    }
+    this.setData({ dueDate: value, dueTouched: true })
   },
 
-  /** 新建任务：选择下单日期（业务实际下单日，可早于今天录入） */
+  /** 新建任务：选择下单日期（可选过去的日子，补录历史任务用） */
   handleOrderChange(e) {
-    this.setData({ orderDate: e.detail.value })
+    const value = e.detail.value
+    const dueDate = this.data.dueDate
+
+    // 补录历史任务：用户没动过交付日期时，跟着下单日期带出 7 天交期
+    if (!this.data.dueTouched) {
+      const nextDue = addDays(value, 7)
+      this.setData({ orderDate: value, dueDate: nextDue })
+      return
+    }
+
+    // 下单晚于交付时，交付自动顺延到下单当天，避免出现先交付后下单
+    if (dueDate && value > dueDate) {
+      this.setData({ orderDate: value, dueDate: value })
+      wx.showToast({ title: `交付日期已同步为 ${value}`, icon: 'none' })
+      return
+    }
+    this.setData({ orderDate: value })
   },
 
   /** 修改当前任务的下单日期：影响「按下单时间」排序 */

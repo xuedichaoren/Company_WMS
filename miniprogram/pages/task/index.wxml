@@ -27,11 +27,11 @@
       {{task.id}} · {{task.operator}} · {{task.time}}
     </view>
 
-    <!-- 下单日期：可手填（业务实际下单日），「按下单时间」排序就用它 -->
+    <!-- 下单日期：可手填（业务实际下单日），可以选过去的日子用于补录，「按下单时间」排序就用它 -->
     <picker
       mode="date"
       value="{{task.orderDate}}"
-      start="{{todayText}}"
+      end="{{task.dueDate}}"
       bindchange="handleTaskOrderChange"
     >
       <view class="task-card__order">
@@ -41,11 +41,11 @@
       </view>
     </picker>
 
-    <!-- 交付日期：点击日期直接改，改完按日期重新排优先级 -->
+    <!-- 交付日期：不能早于下单日期，其余不限制（补录历史任务也能选过去） -->
     <picker
       mode="date"
       value="{{task.dueDate}}"
-      start="{{todayText}}"
+      start="{{task.orderDate || todayText}}"
       bindchange="handleTaskDueChange"
     >
       <view class="task-card__due task-card__due--{{task.dueLevel}}">
@@ -377,12 +377,13 @@
       <text class="price-preview__hint">仅本单，不改版本价</text>
     </view>
 
+    <!-- 下单日期：不限制下限，补录历史任务时可选过去的日子；不能晚于交付日期 -->
     <view class="sheet__row">
       <text class="sheet__label">下单日期</text>
       <picker
         mode="date"
         value="{{orderDate}}"
-        start="{{todayText}}"
+        end="{{dueDate}}"
         bindchange="handleOrderChange"
         class="sheet__value-wrap"
       >
@@ -395,7 +396,7 @@
       <picker
         mode="date"
         value="{{dueDate}}"
-        start="{{todayText}}"
+        start="{{orderDate || '2020-01-01'}}"
         bindchange="handleDueChange"
         class="sheet__value-wrap"
       >
