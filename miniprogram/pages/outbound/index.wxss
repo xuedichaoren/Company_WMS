@@ -1,0 +1,46 @@
+/* pages/outbound/index.wxss —— 出库页样式（通用表单样式见 app.wxss） */
+
+.screen {
+  padding-bottom: calc(200rpx + env(safe-area-inset-bottom));
+}
+
+/* 出库后剩余库存提示 */
+.remain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 22rpx;
+  padding: 18rpx 22rpx;
+  border-radius: 16rpx;
+  background: #f8fafc;
+  border: 1rpx dashed #d9e2f0;
+}
+
+.remain--danger {
+  background: var(--color-danger-light);
+  border-color: #f8c8c8;
+}
+
+.remain__label {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
+.remain__value {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.remain--danger .remain__value {
+  color: var(--color-danger);
+}
+
+/* 跳转操作日志 */
+.log-entry {
+  margin: 32rpx 24rpx 0;
+  padding: 24rpx 0;
+  text-align: center;
+  font-size: 25rpx;
+  color: var(--color-text-secondary);
+}

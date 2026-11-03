@@ -20,6 +20,14 @@
   justify-content: space-between;
 }
 
+.hero__user {
+  min-width: 0;
+}
+
+.hero__user--hover {
+  opacity: 0.75;
+}
+
 .hero__greeting {
   font-size: 38rpx;
   font-weight: 600;

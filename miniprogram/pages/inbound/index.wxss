@@ -1,0 +1,14 @@
+/* pages/inbound/index.wxss —— 入库页样式（通用表单样式见 app.wxss） */
+
+.screen {
+  padding-bottom: calc(200rpx + env(safe-area-inset-bottom));
+}
+
+/* 跳转操作日志 */
+.log-entry {
+  margin: 32rpx 24rpx 0;
+  padding: 24rpx 0;
+  text-align: center;
+  font-size: 25rpx;
+  color: var(--color-text-secondary);
+}

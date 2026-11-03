@@ -1,0 +1,87 @@
+<!-- 库存查询页：搜索 / 状态筛选 / 库存汇总 -->
+<view class="screen">
+  <!-- 顶部搜索与汇总 -->
+  <view class="header">
+    <view class="search-box header__search">
+      <view class="search-box__icon"></view>
+      <input
+        class="search-box__input"
+        value="{{keyword}}"
+        placeholder="搜索商品名称 / SKU / 条码"
+        placeholder-class="search-box__placeholder"
+        confirm-type="search"
+        bindinput="handleKeywordInput"
+      />
+      <text wx:if="{{keyword}}" class="search-box__clear" bindtap="handleClear">清空</text>
+    </view>
+
+    <view class="summary">
+      <view class="summary__item">
+        <text class="summary__value">{{summary.kinds}}</text>
+        <text class="summary__label">商品种类</text>
+      </view>
+      <view class="summary__item">
+        <text class="summary__value">{{summary.total}}</text>
+        <text class="summary__label">库存总量</text>
+      </view>
+      <view class="summary__item">
+        <text class="summary__value">{{summary.warning}}</text>
+        <text class="summary__label">预警商品</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 状态筛选 -->
+  <scroll-view class="chip-bar chip-bar--scroll" scroll-x show-scrollbar="{{false}}">
+    <view
+      class="chip {{status === item.key ? 'chip--active' : ''}}"
+      wx:for="{{statusTabs}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      hover-class="chip--hover"
+      bindtap="handleStatusTap"
+    >
+      {{item.label}}
+    </view>
+  </scroll-view>
+
+  <!-- 商品列表 -->
+  <view class="list">
+    <view
+      class="goods goods--{{item.status}}"
+      wx:for="{{goodsList}}"
+      wx:key="id"
+      data-index="{{index}}"
+      hover-class="goods--hover"
+      bindtap="handleGoodsTap"
+    >
+      <view class="goods__head">
+        <text class="goods__title">{{item.title}}</text>
+        <text
+          class="tag {{item.status === 'normal' ? 'tag--success' : (item.status === 'warning' ? 'tag--warning' : 'tag--danger')}}"
+        >
+          {{item.statusText}}
+        </text>
+      </view>
+
+      <view class="goods__meta">{{item.sku}} · {{item.spec}}</view>
+
+      <view class="goods__foot">
+        <view class="goods__loc">
+          <text class="goods__loc-label">库位</text>
+          <text class="goods__loc-value">{{item.location || '未设置'}}</text>
+        </view>
+        <view class="goods__stock">
+          <text class="goods__num">{{item.stock}}</text>
+          <text class="goods__unit">{{item.unit}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{goodsList.length === 0}}" class="empty-state">
+      <text class="empty-state__text">没有符合条件的商品</text>
+    </view>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

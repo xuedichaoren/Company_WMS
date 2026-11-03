@@ -1,0 +1,182 @@
+<!-- 入库页：扫码/搜索选品 → 填写数量库位 → 提交入库 -->
+<view class="screen screen--with-footer accent-in">
+  <!-- 入库 / 出库切换 -->
+  <view class="type-tabs">
+    <view class="type-tabs__item type-tabs__item--active">入库</view>
+    <view class="type-tabs__item" data-type="out" bindtap="handleSwitchType">出库</view>
+  </view>
+
+  <!-- 提交成功提示 -->
+  <view wx:if="{{lastResult}}" class="result-strip" bindtap="handleResultTap">
+    <view class="result-strip__main">
+      <view class="result-strip__title">
+        入库成功 +{{lastResult.quantity}}{{lastResult.unit}}
+      </view>
+      <view class="result-strip__meta">
+        {{lastResult.title}} · 单号 {{lastResult.id}} · 当前库存 {{lastResult.stock}}{{lastResult.unit}}
+      </view>
+    </view>
+    <text class="result-strip__more">详情 ›</text>
+  </view>
+
+  <!-- ==================== 商品选择 ==================== -->
+  <view class="card">
+    <view class="card__head">
+      <text class="card__title">选择商品</text>
+      <text class="card__link" bindtap="handleScan">扫码识别 ›</text>
+    </view>
+
+    <view class="search-box picker__search">
+      <view class="search-box__icon"></view>
+      <input
+        class="search-box__input"
+        value="{{keyword}}"
+        placeholder="输入商品名称 / SKU / 条码"
+        placeholder-class="search-box__placeholder"
+        confirm-type="search"
+        bindinput="handleKeywordInput"
+      />
+      <text wx:if="{{keyword}}" class="search-box__clear" bindtap="handleClear">清空</text>
+    </view>
+
+    <!-- 搜索结果 -->
+    <view wx:if="{{suggestions.length}}" class="sug">
+      <view
+        class="sug__item"
+        wx:for="{{suggestions}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        hover-class="sug__item--hover"
+        bindtap="handleSuggestionTap"
+      >
+        <view class="sug__main">
+          <view class="sug__title">{{item.title}}</view>
+          <view class="sug__meta">{{item.sku}} · {{item.spec}}</view>
+        </view>
+        <view class="sug__stock">库存 {{item.stock}}{{item.unit}}</view>
+      </view>
+    </view>
+
+    <view wx:elif="{{keyword}}" class="empty-state">
+      <text class="empty-state__text">没有匹配的商品，换个关键词试试</text>
+    </view>
+
+    <!-- 已选商品 -->
+    <view wx:if="{{goods}}" class="picked">
+      <view class="picked__head">
+        <view class="picked__title">{{goods.title}}</view>
+        <text
+          class="tag {{goods.status === 'normal' ? 'tag--success' : (goods.status === 'warning' ? 'tag--warning' : 'tag--danger')}}"
+        >
+          {{goods.statusText}}
+        </text>
+      </view>
+      <view class="picked__meta">{{goods.sku}} · {{goods.spec}}</view>
+      <view class="picked__row">
+        <text class="picked__label">当前库存</text>
+        <text class="picked__value">{{goods.stock}}{{goods.unit}}</text>
+      </view>
+      <view class="picked__row">
+        <text class="picked__label">默认库位</text>
+        <text class="picked__value">{{goods.location || '未设置'}}</text>
+      </view>
+    </view>
+
+    <view wx:elif="{{!suggestions.length}}" class="empty-state">
+      <text class="empty-state__text">扫码或搜索后选择要入库的商品</text>
+    </view>
+  </view>
+
+  <!-- ==================== 常用商品 ==================== -->
+  <view wx:if="{{quickGoods.length}}" class="card">
+    <view class="card__head">
+      <text class="card__title">常用商品</text>
+      <text class="card__hint">点击快速选择</text>
+    </view>
+    <scroll-view class="quick" scroll-x show-scrollbar="{{false}}">
+      <view
+        class="quick__item"
+        wx:for="{{quickGoods}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        hover-class="quick__item--hover"
+        bindtap="handleQuickTap"
+      >
+        <view class="quick__title">{{item.title}}</view>
+        <view class="quick__meta">{{item.stock}}{{item.unit}} · {{item.location}}</view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- ==================== 入库信息 ==================== -->
+  <view class="card">
+    <view class="card__title">入库信息</view>
+
+    <view class="qty">
+      <text class="qty__label">入库数量</text>
+      <view class="stepper">
+        <view class="stepper__btn" hover-class="stepper__btn--hover" data-step="-1" bindtap="handleQtyStep">−</view>
+        <input
+          class="stepper__input"
+          type="number"
+          value="{{quantity}}"
+          placeholder="0"
+          placeholder-class="form-row__placeholder"
+          bindinput="handleQtyInput"
+        />
+        <view class="stepper__btn" hover-class="stepper__btn--hover" data-step="1" bindtap="handleQtyStep">+</view>
+      </view>
+    </view>
+
+    <view class="qty-quick">
+      <view class="qty-quick__item" hover-class="qty-quick__item--hover" data-value="10" bindtap="handleQtyQuick">+10</view>
+      <view class="qty-quick__item" hover-class="qty-quick__item--hover" data-value="50" bindtap="handleQtyQuick">+50</view>
+      <view class="qty-quick__item" hover-class="qty-quick__item--hover" data-value="100" bindtap="handleQtyQuick">+100</view>
+    </view>
+
+    <view class="form-row">
+      <text class="form-row__label">入库库位</text>
+      <input
+        class="form-row__input"
+        value="{{location}}"
+        placeholder="如 A-01-03"
+        placeholder-class="form-row__placeholder"
+        bindinput="handleLocationInput"
+      />
+    </view>
+
+    <view class="form-row form-row--textarea">
+      <text class="form-row__label">备注</text>
+      <textarea
+        class="form-row__textarea"
+        value="{{remark}}"
+        placeholder="选填，如供应商、批次号"
+        placeholder-class="form-row__placeholder"
+        maxlength="60"
+        auto-height
+        bindinput="handleRemarkInput"
+      />
+    </view>
+  </view>
+
+  <view class="log-entry" bindtap="handleGoLog">查看全部出入库记录 ›</view>
+
+  <view class="safe-bottom"></view>
+
+  <!-- ==================== 底部提交 ==================== -->
+  <view class="footer-bar">
+    <view class="footer-bar__row">
+      <view class="footer-bar__info">
+        <text class="footer-bar__label">合计入库</text>
+        <text class="footer-bar__value">{{quantity || 0}}{{goods ? goods.unit : '件'}}</text>
+      </view>
+      <view
+        class="btn btn--success footer-bar__btn {{goods && quantity ? '' : 'btn--disabled'}}"
+        hover-class="btn--hover"
+        bindtap="handleSubmit"
+      >
+        确认入库
+      </view>
+    </view>
+  </view>
+</view>

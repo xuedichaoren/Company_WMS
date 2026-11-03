@@ -1,6 +1,12 @@
 {
   "pages": [
-    "pages/index/index"
+    "pages/index/index",
+    "pages/login/index",
+    "pages/inbound/index",
+    "pages/outbound/index",
+    "pages/stock/index",
+    "pages/goods/index",
+    "pages/log/index"
   ],
   "window": {
     "navigationBarBackgroundColor": "#2f6bff",

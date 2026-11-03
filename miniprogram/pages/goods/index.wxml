@@ -1,0 +1,220 @@
+<!-- 商品管理页：列表 / 搜索 / 分类筛选 / 新增编辑 -->
+<view class="screen">
+  <!-- 顶部搜索 -->
+  <view class="header">
+    <view class="header__row">
+      <view class="search-box header__search">
+        <view class="search-box__icon"></view>
+        <input
+          class="search-box__input"
+          value="{{keyword}}"
+          placeholder="搜索商品名称 / SKU / 条码"
+          placeholder-class="search-box__placeholder"
+          confirm-type="search"
+          bindinput="handleKeywordInput"
+        />
+        <text wx:if="{{keyword}}" class="search-box__clear" bindtap="handleClear">清空</text>
+      </view>
+
+      <view class="header__add" hover-class="header__add--hover" bindtap="handleCreate">
+        <text class="header__add-icon">＋</text>
+      </view>
+    </view>
+
+    <view class="header__sub">共 {{total}} 个商品，点击商品可编辑或删除</view>
+  </view>
+
+  <!-- 分类筛选 -->
+  <scroll-view class="chip-bar chip-bar--scroll" scroll-x show-scrollbar="{{false}}">
+    <view
+      class="chip {{category === item ? 'chip--active' : ''}}"
+      wx:for="{{categories}}"
+      wx:key="*this"
+      data-category="{{item}}"
+      hover-class="chip--hover"
+      bindtap="handleCategoryTap"
+    >
+      {{item}}
+    </view>
+  </scroll-view>
+
+  <!-- 商品列表 -->
+  <view class="list">
+    <view
+      class="item"
+      wx:for="{{goodsList}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      hover-class="item--hover"
+      bindtap="handleGoodsTap"
+    >
+      <view class="item__head">
+        <text class="item__title">{{item.title}}</text>
+        <text
+          class="tag {{item.status === 'normal' ? 'tag--success' : (item.status === 'warning' ? 'tag--warning' : 'tag--danger')}}"
+        >
+          {{item.statusText}}
+        </text>
+      </view>
+
+      <view class="item__meta">{{item.sku}} · {{item.spec}}</view>
+
+      <view class="item__tags">
+        <text class="tag tag--primary">{{item.category}}</text>
+        <text class="item__stock">库存 {{item.stock}}{{item.unit}} / 安全 {{item.safeStock}}{{item.unit}}</text>
+      </view>
+
+      <view class="item__foot">
+        <text class="item__loc">库位 {{item.location || '未设置'}} · 单价 ¥{{item.price}}</text>
+        <view class="item__ops">
+          <view class="item__op" data-id="{{item.id}}" catchtap="handleEdit">编辑</view>
+          <view class="item__op item__op--danger" data-id="{{item.id}}" catchtap="handleDelete">删除</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{goodsList.length === 0}}" class="empty-state">
+      <text class="empty-state__text">暂无商品，点击右上角「＋」新增</text>
+    </view>
+  </view>
+
+  <view class="safe-bottom"></view>
+
+  <!-- ==================== 新增 / 编辑弹层 ==================== -->
+  <view wx:if="{{showEditor}}" class="mask" bindtap="closeEditor"></view>
+  <view wx:if="{{showEditor}}" class="sheet" catchtap="noop">
+    <view class="sheet__head">
+      <text class="sheet__cancel" bindtap="closeEditor">取消</text>
+      <text class="sheet__title">{{editorTitle}}</text>
+      <text class="sheet__save" bindtap="handleSave">保存</text>
+    </view>
+
+    <scroll-view class="sheet__body" scroll-y>
+      <view class="sheet__row">
+        <text class="sheet__label">商品名称<text class="sheet__req">*</text></text>
+        <input
+          class="sheet__input"
+          data-field="title"
+          value="{{form.title}}"
+          placeholder="如 无线蓝牙耳机"
+          placeholder-class="sheet__placeholder"
+          bindinput="handleFieldInput"
+        />
+      </view>
+
+      <view class="sheet__row">
+        <text class="sheet__label">SKU<text class="sheet__req">*</text></text>
+        <input
+          class="sheet__input"
+          data-field="sku"
+          value="{{form.sku}}"
+          placeholder="如 SKU-10086"
+          placeholder-class="sheet__placeholder"
+          bindinput="handleFieldInput"
+        />
+      </view>
+
+      <view class="sheet__row">
+        <text class="sheet__label">规格</text>
+        <input
+          class="sheet__input"
+          data-field="spec"
+          value="{{form.spec}}"
+          placeholder="如 白色 / 标准版"
+          placeholder-class="sheet__placeholder"
+          bindinput="handleFieldInput"
+        />
+      </view>
+
+      <view class="sheet__row">
+        <text class="sheet__label">条码</text>
+        <input
+          class="sheet__input"
+          data-field="barCode"
+          value="{{form.barCode}}"
+          placeholder="扫码枪 / 手输条码"
+          placeholder-class="sheet__placeholder"
+          bindinput="handleFieldInput"
+        />
+      </view>
+
+      <picker
+        mode="selector"
+        range="{{formCategories}}"
+        value="{{categoryIndex}}"
+        bindchange="handleCategoryChange"
+      >
+        <view class="sheet__row">
+          <text class="sheet__label">分类</text>
+          <view class="sheet__value">{{form.category}}</view>
+        </view>
+      </picker>
+
+      <view class="sheet__row">
+        <text class="sheet__label">单位</text>
+        <input
+          class="sheet__input"
+          data-field="unit"
+          value="{{form.unit}}"
+          placeholder="如 件 / 包 / 台"
+          placeholder-class="sheet__placeholder"
+          bindinput="handleFieldInput"
+        />
+      </view>
+
+      <view class="sheet__row">
+        <text class="sheet__label">库位</text>
+        <input
+          class="sheet__input"
+          data-field="location"
+          value="{{form.location}}"
+          placeholder="如 A-01-03"
+          placeholder-class="sheet__placeholder"
+          bindinput="handleFieldInput"
+        />
+      </view>
+
+      <view class="sheet__row">
+        <text class="sheet__label">当前库存</text>
+        <input
+          class="sheet__input"
+          type="number"
+          data-field="stock"
+          value="{{form.stock}}"
+          placeholder="0"
+          placeholder-class="sheet__placeholder"
+          bindinput="handleFieldInput"
+        />
+      </view>
+
+      <view class="sheet__row">
+        <text class="sheet__label">安全库存</text>
+        <input
+          class="sheet__input"
+          type="number"
+          data-field="safeStock"
+          value="{{form.safeStock}}"
+          placeholder="低于该值提示预警"
+          placeholder-class="sheet__placeholder"
+          bindinput="handleFieldInput"
+        />
+      </view>
+
+      <view class="sheet__row">
+        <text class="sheet__label">单价（元）</text>
+        <input
+          class="sheet__input"
+          type="digit"
+          data-field="price"
+          value="{{form.price}}"
+          placeholder="0.00"
+          placeholder-class="sheet__placeholder"
+          bindinput="handleFieldInput"
+        />
+      </view>
+
+      <view class="sheet__tips">带 <text class="sheet__req">*</text> 为必填项，SKU 不可重复</view>
+      <view class="sheet__bottom"></view>
+    </scroll-view>
+  </view>
+</view>

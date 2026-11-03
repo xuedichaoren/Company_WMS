@@ -1,0 +1,155 @@
+/* pages/stock/index.wxss —— 库存查询页样式 */
+
+/* ==================== 顶部搜索与汇总 ==================== */
+.header {
+  padding: 28rpx 24rpx 32rpx;
+  background: linear-gradient(135deg, #2f6bff 0%, #4b84ff 62%, #77a4ff 100%);
+  border-radius: 0 0 36rpx 36rpx;
+}
+
+.header__search {
+  box-shadow: none;
+}
+
+.summary {
+  display: flex;
+  margin-top: 30rpx;
+}
+
+.summary__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #ffffff;
+}
+
+.summary__value {
+  font-size: 40rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.summary__label {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  opacity: 0.82;
+}
+
+/* ==================== 筛选 ==================== */
+.chip-bar--scroll {
+  padding: 0 24rpx;
+}
+
+/* ==================== 商品列表 ==================== */
+.list {
+  padding: 8rpx 24rpx 0;
+}
+
+.goods {
+  position: relative;
+  margin-top: 20rpx;
+  padding: 26rpx 24rpx 22rpx 28rpx;
+  border-radius: var(--radius-card);
+  background: var(--color-card);
+  box-shadow: 0 8rpx 24rpx rgba(31, 42, 68, 0.05);
+  overflow: hidden;
+}
+
+/* 左侧状态色条 */
+.goods::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 24rpx;
+  bottom: 24rpx;
+  width: 8rpx;
+  border-radius: 0 8rpx 8rpx 0;
+  background: var(--color-success);
+}
+
+.goods--warning::before {
+  background: var(--color-warning);
+}
+
+.goods--empty::before {
+  background: var(--color-danger);
+}
+
+.goods--hover {
+  opacity: 0.75;
+}
+
+.goods__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.goods__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 29rpx;
+  font-weight: 600;
+  color: var(--color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.goods__meta {
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  color: var(--color-text-muted);
+}
+
+.goods__foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 20rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid var(--color-border);
+}
+
+.goods__loc {
+  display: flex;
+  align-items: baseline;
+}
+
+.goods__loc-label {
+  font-size: 22rpx;
+  color: var(--color-text-muted);
+}
+
+.goods__loc-value {
+  margin-left: 10rpx;
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
+.goods__stock {
+  display: flex;
+  align-items: baseline;
+}
+
+.goods__num {
+  font-size: 36rpx;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-text);
+}
+
+.goods--warning .goods__num {
+  color: var(--color-warning);
+}
+
+.goods--empty .goods__num {
+  color: var(--color-danger);
+}
+
+.goods__unit {
+  margin-left: 6rpx;
+  font-size: 22rpx;
+  color: var(--color-text-muted);
+}

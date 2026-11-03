@@ -4,7 +4,7 @@
   <view class="hero">
     <!-- 问候语、仓库信息与扫码入口 -->
     <view class="hero__top">
-      <view class="hero__user">
+      <view class="hero__user" hover-class="hero__user--hover" bindtap="handleUserTap">
         <view class="hero__greeting">{{greeting}}，{{userName}}</view>
         <view class="hero__warehouse">
           {{overview.warehouseName}} · {{userRole}}

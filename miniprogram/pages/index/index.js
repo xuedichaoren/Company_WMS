@@ -1,97 +1,11 @@
 // pages/index/index.js
 // ============================================================
 // 首页：仓库概览、扫码入口、快捷操作、最近操作记录
-// 数据来源：本文件内的静态模拟数据
+// 数据来源：utils/store.js（纯前端演示数据，本地持久化）
 // ============================================================
 
 const app = getApp()
-
-// ============================================================
-// 静态模拟数据（纯前端演示）
-// 说明：不请求任何后端接口，后续接入真实接口时，
-// 保持下方字段结构不变，把常量替换为接口返回值即可。
-// ============================================================
-
-/** 仓库概览 */
-const overview = {
-  warehouseName: '华东一号仓',
-  /** 顶部数据卡片，按展示顺序排列 */
-  stats: [
-    { key: 'inbound', label: '今日入库', value: 12, unit: '单' },
-    { key: 'outbound', label: '今日出库', value: 9, unit: '单' },
-    { key: 'stock', label: '在库商品', value: 1286, unit: '件' },
-    { key: 'warning', label: '库存预警', value: 5, unit: '项' }
-  ]
-}
-
-/** 最近操作记录：type 为 in(入库) / out(出库)，按时间从新到旧排列 */
-const recentRecords = [
-  {
-    id: 'IN-20261027-001',
-    type: 'in',
-    typeText: '入库',
-    title: '无线蓝牙耳机',
-    sku: 'SKU-10086',
-    spec: '白色 / 标准版',
-    quantity: 100,
-    unit: '件',
-    operator: '张伟',
-    location: 'A-01-03',
-    time: '10:32'
-  },
-  {
-    id: 'OUT-20261027-004',
-    type: 'out',
-    typeText: '出库',
-    title: '机械键盘 K8',
-    sku: 'SKU-10021',
-    spec: '87 键 / 黑色',
-    quantity: 20,
-    unit: '件',
-    operator: '李娜',
-    location: 'B-02-01',
-    time: '09:58'
-  },
-  {
-    id: 'IN-20261027-002',
-    type: 'in',
-    typeText: '入库',
-    title: '智能手环 5',
-    sku: 'SKU-10056',
-    spec: '深空灰',
-    quantity: 60,
-    unit: '件',
-    operator: '张伟',
-    location: 'A-02-01',
-    time: '09:15'
-  },
-  {
-    id: 'OUT-20261027-003',
-    type: 'out',
-    typeText: '出库',
-    title: '快充数据线',
-    sku: 'SKU-10008',
-    spec: 'Type-C / 1.5m',
-    quantity: 150,
-    unit: '件',
-    operator: '王强',
-    location: 'C-01-02',
-    time: '08:47'
-  },
-  {
-    id: 'IN-20261026-018',
-    type: 'in',
-    typeText: '入库',
-    title: '无线鼠标 M3',
-    sku: 'SKU-10033',
-    spec: '2.4G / 黑色',
-    quantity: 80,
-    unit: '件',
-    operator: '李娜',
-    location: 'B-01-02',
-    time: '昨天 17:20'
-  }
-]
+const store = require('../../utils/store.js')
 
 /**
  * 快捷操作配置
@@ -121,7 +35,14 @@ const PAGE_ROUTES = {
 }
 
 /** 已完成开发的页面路径列表（后续开发一个页面就加一条） */
-const READY_PAGES = []
+const READY_PAGES = [
+  '/pages/login/index',
+  '/pages/inbound/index',
+  '/pages/outbound/index',
+  '/pages/stock/index',
+  '/pages/goods/index',
+  '/pages/log/index'
+]
 
 /** 星期名称，用于日期格式化 */
 const WEEK_DAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
@@ -154,9 +75,10 @@ function formatDate(date) {
 
 Page({
   data: {
-    // 当前登录用户（来自全局数据，后续接入登录页后替换）
+    // 当前登录用户（来源：utils/store.js 登录态，未登录时显示游客）
     userName: '',
     userRole: '',
+    logged: false,
     // 动态问候语与日期
     greeting: '',
     dateText: '',
@@ -175,11 +97,8 @@ Page({
   },
 
   onShow() {
-    // 从其他页面返回时刷新问候语和日期，避免跨天显示错误
-    this.setData({
-      greeting: getGreeting(new Date().getHours()),
-      dateText: formatDate(new Date())
-    })
+    // 从其他页面返回时刷新数据、问候语与日期，保证与最新操作同步
+    this.loadData()
   },
 
   /**
@@ -196,13 +115,54 @@ Page({
   /** 加载首页数据 */
   loadData() {
     const now = new Date()
+    const user = store.getUser()
+    const overview = store.getOverview()
+
     this.setData({
-      userName: app.globalData.userInfo.name,
-      userRole: app.globalData.userInfo.role,
+      logged: !!user,
+      userName: user ? user.name : '游客',
+      userRole: user ? user.role : '点击登录',
       greeting: getGreeting(now.getHours()),
       dateText: formatDate(now),
-      overview,
-      records: recentRecords
+      overview: {
+        warehouseName: app.globalData.warehouse.name,
+        stats: overview.stats
+      },
+      records: store.listRecords({ limit: 5 })
+    })
+  },
+
+  /**
+   * 点击顶部用户区域
+   * 未登录 → 去登录页；已登录 → 提供切换账号 / 重置演示数据入口
+   */
+  handleUserTap() {
+    if (!this.data.logged) {
+      wx.navigateTo({ url: '/pages/login/index' })
+      return
+    }
+
+    wx.showActionSheet({
+      itemList: ['切换账号', '重置演示数据'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          wx.navigateTo({ url: '/pages/login/index' })
+          return
+        }
+        wx.showModal({
+          title: '重置演示数据',
+          content: '将清空本地商品与出入库记录，恢复初始演示数据，是否继续？',
+          confirmText: '重置',
+          confirmColor: '#ef4444',
+          success: (modalRes) => {
+            if (!modalRes.confirm) return
+            store.resetDemoData()
+            this.loadData()
+            wx.showToast({ title: '已恢复初始数据', icon: 'success' })
+          }
+        })
+      },
+      fail: () => {}
     })
   },
 
@@ -304,6 +264,7 @@ Page({
     wx.showModal({
       title: `${record.typeText}详情`,
       content: [
+        `单号：${record.id}`,
         `商品：${record.title}`,
         `SKU：${record.sku}`,
         `规格：${record.spec}`,

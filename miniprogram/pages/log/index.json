@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "操作日志",
+  "navigationBarBackgroundColor": "#2f6bff",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#f4f6fb",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "usingComponents": {}
+}

@@ -1,0 +1,182 @@
+/* pages/login/index.wxss —— 登录页样式 */
+
+.login {
+  position: relative;
+  min-height: 100vh;
+  padding: 0 48rpx;
+  background: linear-gradient(170deg, #2f6bff 0%, #4b84ff 42%, #f4f6fb 42%, #f4f6fb 100%);
+}
+
+/* ==================== 品牌区 ==================== */
+.brand {
+  padding: 90rpx 0 70rpx;
+  color: #ffffff;
+}
+
+.brand__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 108rpx;
+  height: 108rpx;
+  border-radius: 32rpx;
+  background: rgba(255, 255, 255, 0.22);
+  border: 2rpx solid rgba(255, 255, 255, 0.45);
+  font-size: 38rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+}
+
+.brand__name {
+  margin-top: 26rpx;
+  font-size: 46rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+}
+
+.brand__desc {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  opacity: 0.85;
+}
+
+/* ==================== 登录卡片 ==================== */
+.login__card {
+  padding: 40rpx 36rpx 36rpx;
+  border-radius: 32rpx;
+  background: #ffffff;
+  box-shadow: 0 20rpx 50rpx rgba(31, 42, 68, 0.12);
+}
+
+.login__title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* 表单行 */
+.field {
+  margin-top: 32rpx;
+}
+
+.field__label {
+  display: block;
+  margin-bottom: 14rpx;
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
+.field__row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.field__input {
+  flex: 1;
+  min-width: 0;
+  height: 76rpx;
+  font-size: 30rpx;
+  color: var(--color-text);
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.field__row .field__input {
+  border-bottom: none;
+}
+
+.field__placeholder {
+  color: #c2c9d6;
+  font-size: 27rpx;
+}
+
+.field__eye {
+  flex-shrink: 0;
+  padding: 10rpx 0 10rpx 24rpx;
+  font-size: 24rpx;
+  color: var(--color-primary);
+}
+
+/* 演示账号 */
+.demo {
+  margin-top: 34rpx;
+}
+
+.demo__label {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
+.demo__list {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+
+.demo__item {
+  margin: 0 16rpx 16rpx 0;
+  padding: 12rpx 22rpx;
+  border-radius: 999rpx;
+  background: #f2f4f9;
+  font-size: 23rpx;
+  color: var(--color-text-secondary);
+}
+
+.demo__item--active {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  font-weight: 500;
+}
+
+.login__btn {
+  margin-top: 30rpx;
+  font-size: 32rpx;
+  letter-spacing: 4rpx;
+}
+
+.login__tips {
+  margin-top: 24rpx;
+  text-align: center;
+  font-size: 23rpx;
+  color: var(--color-text-muted);
+}
+
+.login__link {
+  color: var(--color-primary);
+}
+
+/* 已登录时展示的退出入口 */
+.logout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 28rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid var(--color-border);
+}
+
+.logout__text {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
+.logout__link {
+  font-size: 24rpx;
+  color: var(--color-danger);
+}
+
+/* ==================== 底部 ==================== */
+.login__skip {
+  margin-top: 40rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+}
+
+.login__footer {
+  margin-top: 48rpx;
+  padding-bottom: calc(36rpx + env(safe-area-inset-bottom));
+  text-align: center;
+  font-size: 22rpx;
+  color: #b7bfcc;
+}

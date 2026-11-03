@@ -1,0 +1,83 @@
+<!-- 登录页：演示版账号登录 -->
+<view class="login">
+  <!-- 顶部品牌区 -->
+  <view class="brand">
+    <view class="brand__logo">WMS</view>
+    <view class="brand__name">仓储管理系统</view>
+    <view class="brand__desc">华东一号仓 · 手机端仓储作业</view>
+  </view>
+
+  <!-- 登录表单 -->
+  <view class="login__card">
+    <view class="login__title">账号登录</view>
+
+    <view class="field">
+      <text class="field__label">工号</text>
+      <input
+        class="field__input"
+        value="{{account}}"
+        placeholder="请输入工号，如 admin"
+        placeholder-class="field__placeholder"
+        maxlength="20"
+        confirm-type="next"
+        bindinput="handleAccountInput"
+      />
+    </view>
+
+    <view class="field">
+      <text class="field__label">密码</text>
+      <view class="field__row">
+        <input
+          class="field__input"
+          value="{{password}}"
+          password="{{!showPwd}}"
+          placeholder="请输入密码"
+          placeholder-class="field__placeholder"
+          maxlength="20"
+          confirm-type="done"
+          bindinput="handlePasswordInput"
+          bindconfirm="handleLogin"
+        />
+        <text class="field__eye" bindtap="togglePwd">{{showPwd ? '隐藏' : '显示'}}</text>
+      </view>
+    </view>
+
+    <!-- 演示账号快捷入口 -->
+    <view class="demo">
+      <text class="demo__label">演示工号</text>
+      <view class="demo__list">
+        <view
+          class="demo__item {{account === item.account ? 'demo__item--active' : ''}}"
+          wx:for="{{demoAccounts}}"
+          wx:key="account"
+          data-account="{{item.account}}"
+          bindtap="handleDemoTap"
+        >
+          {{item.name}} · {{item.role}}
+        </view>
+      </view>
+    </view>
+
+    <view
+      class="btn btn--primary btn--block login__btn {{submitting ? 'btn--disabled' : ''}}"
+      hover-class="btn--hover"
+      bindtap="handleLogin"
+    >
+      {{submitting ? '登录中…' : '登 录'}}
+    </view>
+
+    <view class="login__tips">
+      <text>演示密码统一为 123456，</text>
+      <text class="login__link" bindtap="handleQuickFill">一键填入</text>
+    </view>
+
+    <view wx:if="{{currentUser}}" class="logout">
+      <text class="logout__text">当前登录：{{currentUser.name}}（{{currentUser.role}}）</text>
+      <text class="logout__link" bindtap="handleLogout">退出登录</text>
+    </view>
+  </view>
+
+  <view class="login__skip" bindtap="handleSkip">暂不登录，先逛逛 ›</view>
+
+  <view class="login__footer">© 2026 WMS · 纯前端演示版本</view>
+</view>
