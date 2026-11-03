@@ -9,6 +9,7 @@
           <text class="task-card__badge {{task.status === 'done' ? 'task-card__badge--done' : ''}}">
             {{task.statusText}}
           </text>
+          <text class="task-card__rank-tag" wx:if="{{taskRank}}">第 {{taskRank}} 优先</text>
         </view>
         <view class="task-card__name">{{task.name}}</view>
       </view>
@@ -25,6 +26,21 @@
     <view class="task-card__meta">
       {{task.id}} · {{task.operator}} · {{task.time}}
     </view>
+
+    <!-- 交付日期：点击日期直接改，改完按日期重新排优先级 -->
+    <picker
+      mode="date"
+      value="{{task.dueDate}}"
+      start="{{todayText}}"
+      bindchange="handleTaskDueChange"
+    >
+      <view class="task-card__due task-card__due--{{task.dueLevel}}">
+        <text class="task-card__due-label">交付日期</text>
+        <text class="task-card__due-date">{{task.dueDate || '未设置'}}</text>
+        <text class="task-card__due-tip">{{task.dueTip}}</text>
+        <text class="task-card__due-edit">修改 ›</text>
+      </view>
+    </picker>
 
     <!-- 进度 -->
     <view class="progress">
@@ -165,26 +181,54 @@
       hover-class="tl__row--hover"
       bindtap="handleTaskPick"
     >
+      <!-- 优先级序号：按交付日期自动排，可手动调整 -->
+      <view
+        class="tl__rank {{item.priority === 1 ? 'tl__rank--top' : ''}} {{item.dueLevel === 'overdue' ? 'tl__rank--danger' : ''}}"
+      >
+        {{item.priority || '—'}}
+      </view>
+
       <view class="tl__main">
         <view class="tl__title-row">
           <text class="tl__version">{{item.version}}</text>
+          <text class="tl__no">#{{item.idShort}}</text>
           <text class="tl__badge {{item.status === 'done' ? 'tl__badge--done' : ''}}">
             {{item.statusText}}
           </text>
           <text class="tl__current" wx:if="{{item.id === taskId}}">当前</text>
         </view>
-        <view class="tl__meta">
-          {{item.id}} · 计划 {{item.planQty}} 台 · 已完工 {{item.doneQty}} 台
+        <view class="tl__meta tl__meta--due tl__meta--{{item.dueLevel}}">
+          交付 {{item.dueDate || '未设置'}} · {{item.dueTip}}
         </view>
-        <view class="tl__meta">{{item.time}}</view>
+        <view class="tl__meta-row">
+          <text class="tl__meta">计划 {{item.planQty}} 台 · 已完工 {{item.doneQty}} 台</text>
+          <text
+            class="tl__del"
+            hover-class="tl__del--hover"
+            data-id="{{item.id}}"
+            catchtap="handleTaskDelete"
+          >
+            删除
+          </text>
+        </view>
       </view>
-      <view
-        class="tl__del"
-        hover-class="tl__del--hover"
-        data-id="{{item.id}}"
-        catchtap="handleTaskDelete"
-      >
-        删除
+
+      <!-- 手动调整优先级：只在进行中的任务上显示 -->
+      <view class="tl__ops" wx:if="{{item.status === 'doing'}}">
+        <view
+          class="tl__op {{item.canMoveUp ? '' : 'tl__op--off'}}"
+          data-id="{{item.id}}"
+          data-dir="up"
+          hover-class="tl__op--hover"
+          catchtap="handleTaskMove"
+        >↑</view>
+        <view
+          class="tl__op {{item.canMoveDown ? '' : 'tl__op--off'}}"
+          data-id="{{item.id}}"
+          data-dir="down"
+          hover-class="tl__op--hover"
+          catchtap="handleTaskMove"
+        >↓</view>
       </view>
     </view>
 
@@ -192,6 +236,9 @@
   </scroll-view>
 
   <view class="tl__foot">
+    <view class="tl__reset" hover-class="tl__reset--hover" bindtap="handleResetOrder">
+      按交付日期重排
+    </view>
     <view class="btn btn--primary tl__create" hover-class="btn--hover" bindtap="handleTaskCreate">
       ＋ 新建任务
     </view>
@@ -244,6 +291,19 @@
     </view>
 
     <view class="sheet__row">
+      <text class="sheet__label">交付日期<text class="sheet__req">*</text></text>
+      <picker
+        mode="date"
+        value="{{dueDate}}"
+        start="{{todayText}}"
+        bindchange="handleDueChange"
+        class="sheet__value-wrap"
+      >
+        <view class="sheet__value">{{dueDate || '请选择'}} ›</view>
+      </picker>
+    </view>
+
+    <view class="sheet__row">
       <text class="sheet__label">备注</text>
       <input
         class="sheet__input"
@@ -254,7 +314,7 @@
       />
     </view>
 
-    <view class="sheet__tips">创建后会自动按 BOM 计算物料齐套情况</view>
+    <view class="sheet__tips">创建后自动按 BOM 计算齐套情况，并按交付日期排入任务优先级</view>
     <view class="sheet__bottom"></view>
   </scroll-view>
 </view>

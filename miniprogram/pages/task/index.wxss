@@ -46,6 +46,16 @@
   background: var(--color-success-light);
 }
 
+/* 当前任务在队列中的位置 */
+.task-card__rank-tag {
+  margin-left: 12rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 8rpx;
+  font-size: 19rpx;
+  color: var(--color-text-secondary);
+  background: #eef2fb;
+}
+
 .task-card__name {
   margin-top: 8rpx;
   font-size: 24rpx;
@@ -89,6 +99,63 @@
   margin-top: 14rpx;
   font-size: 21rpx;
   color: var(--color-text-muted);
+}
+
+/* 交付日期：点击可直接改 */
+.task-card__due {
+  display: flex;
+  align-items: center;
+  margin-top: 14rpx;
+  padding: 12rpx 16rpx;
+  border-radius: 14rpx;
+  background: #f5f7fc;
+}
+
+.task-card__due-label {
+  font-size: 21rpx;
+  color: var(--color-text-secondary);
+}
+
+.task-card__due-date {
+  margin-left: 10rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.task-card__due-tip {
+  margin-left: 10rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 8rpx;
+  font-size: 19rpx;
+  color: var(--color-text-secondary);
+  background: #e9eefb;
+}
+
+.task-card__due-edit {
+  margin-left: auto;
+  font-size: 20rpx;
+  color: var(--color-primary);
+}
+
+/* 3 天内橙色，逾期红色 */
+.task-card__due--soon .task-card__due-tip,
+.task-card__due--today .task-card__due-tip {
+  color: #b45309;
+  background: #ffeccc;
+}
+
+.task-card__due--overdue {
+  background: #fff1f1;
+}
+
+.task-card__due--overdue .task-card__due-date {
+  color: var(--color-danger);
+}
+
+.task-card__due--overdue .task-card__due-tip {
+  color: #ffffff;
+  background: var(--color-danger);
 }
 
 /* 进度条 */
@@ -390,8 +457,34 @@
 .tl__row {
   display: flex;
   align-items: center;
-  padding: 24rpx 0;
+  padding: 22rpx 0;
   border-bottom: 1rpx solid var(--color-border);
+}
+
+/* 优先级序号 */
+.tl__rank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 16rpx;
+  border-radius: 12rpx;
+  font-size: 22rpx;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: #e3ecff;
+}
+
+.tl__rank--top {
+  color: #ffffff;
+  background: var(--color-primary);
+}
+
+.tl__rank--danger {
+  color: #ffffff;
+  background: var(--color-danger);
 }
 
 .tl__row--hover {
@@ -417,6 +510,13 @@
   font-size: 30rpx;
   font-weight: 600;
   color: var(--color-text);
+}
+
+/* 单号尾号：同版本多条任务时用来区分 */
+.tl__no {
+  margin-left: 8rpx;
+  font-size: 20rpx;
+  color: var(--color-text-muted);
 }
 
 .tl__badge {
@@ -445,18 +545,69 @@
   color: var(--color-text-muted);
 }
 
-.tl__del {
-  flex-shrink: 0;
-  margin-left: 18rpx;
-  padding: 10rpx 20rpx;
-  border-radius: 999rpx;
+/* 交付日期：逾期红、3 天内橙 */
+.tl__meta--due {
   font-size: 22rpx;
+}
+
+.tl__meta--soon,
+.tl__meta--today {
+  color: var(--color-warning);
+}
+
+.tl__meta--overdue {
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.tl__meta-row {
+  display: flex;
+  align-items: center;
+  margin-top: 6rpx;
+}
+
+.tl__del {
+  margin-left: auto;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
   color: var(--color-danger);
   background: var(--color-danger-light);
 }
 
 .tl__del--hover {
   opacity: 0.65;
+}
+
+/* 手动调整优先级 */
+.tl__ops {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 12rpx;
+}
+
+.tl__op {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46rpx;
+  height: 40rpx;
+  margin: 3rpx 0;
+  border-radius: 10rpx;
+  font-size: 24rpx;
+  color: var(--color-primary);
+  background: #e3ecff;
+}
+
+.tl__op--off {
+  color: #c3c9d6;
+  background: #f0f2f7;
+}
+
+.tl__op--hover {
+  opacity: 0.6;
 }
 
 .tl__empty {
@@ -467,9 +618,26 @@
 }
 
 .tl__foot {
+  display: flex;
+  align-items: center;
   padding: 20rpx 32rpx 8rpx;
 }
 
+/* 恢复按交付日期自动排序 */
+.tl__reset {
+  flex-shrink: 0;
+  margin-right: 20rpx;
+  padding: 16rpx 22rpx;
+  border-radius: 999rpx;
+  font-size: 23rpx;
+  color: var(--color-text-secondary);
+  background: #f2f4f9;
+}
+
+.tl__reset--hover {
+  opacity: 0.7;
+}
+
 .tl__create {
-  width: 100%;
+  flex: 1;
 }

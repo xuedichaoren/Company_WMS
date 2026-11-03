@@ -91,8 +91,8 @@ Page({
     // 领料批次明细弹层
     showDetail: false,
     detail: { title: '', rows: [], lines: [], remark: '' },
-    // 当前生产任务（来源：utils/store.js，含齐套摘要）
-    taskOverview: { task: null },
+    // 全部进行中的生产任务（来源：utils/store.js，按优先级排序）
+    taskBoard: { tasks: [], total: 0, overdueCount: 0, shortCount: 0 },
     // 快捷操作配置（静态，无需每次 setData）
     actions: ACTIONS
   },
@@ -134,7 +134,7 @@ Page({
         stats: overview.stats
       },
       records: store.listRecentOps({ limit: 5 }),
-      taskOverview: store.getTaskOverview()
+      taskBoard: store.getTaskBoard()
     })
   },
 
@@ -260,10 +260,36 @@ Page({
   },
 
   /**
-   * 点击「当前任务」卡片：进入生产任务与齐套分析页
+   * 点击任务卡：进入生产任务页并定位到该任务
    */
-  handleTaskTap() {
+  handleTaskTap(e) {
+    const id = e && e.currentTarget && e.currentTarget.dataset.id
+    wx.navigateTo({
+      url: id ? `/pages/task/index?taskId=${encodeURIComponent(id)}` : '/pages/task/index'
+    })
+  },
+
+  /** 进入任务页管理任务（新建 / 排序 / 改交付日期） */
+  handleTaskManage() {
     wx.navigateTo({ url: '/pages/task/index' })
+  },
+
+  /**
+   * 手动调整优先级：上移 / 下移
+   * 排序结果落库到任务权重，首页与其他页面看到的是同一顺序
+   */
+  handleTaskMove(e) {
+    const { id, dir } = e.currentTarget.dataset
+    if (!id || !dir) return
+
+    const result = store.moveTask(id, dir)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+
+    this.setData({ taskBoard: store.getTaskBoard() })
+    wx.showToast({ title: `已调整为第 ${result.position} 位`, icon: 'none' })
   },
 
   /**

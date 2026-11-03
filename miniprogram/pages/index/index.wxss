@@ -298,84 +298,223 @@
   color: var(--color-text-muted);
 }
 
-/* ==================== 当前任务 ==================== */
-.task-section--hover {
-  opacity: 0.88;
+/* ==================== 生产任务列表 ==================== */
+.task-list {
+  margin-top: 4rpx;
 }
 
-.task-line {
+.tcard {
   display: flex;
   align-items: center;
-  margin-top: 22rpx;
+  margin-top: 16rpx;
+  padding: 20rpx 18rpx;
+  border-left: 6rpx solid var(--color-primary);
+  border-radius: 22rpx;
+  background: #f7f9ff;
 }
 
-.task-line__version {
-  font-size: 38rpx;
+.tcard--hover {
+  opacity: 0.82;
+}
+
+/* 交付日期越近，左边条与底色越醒目 */
+.tcard--soon {
+  border-left-color: var(--color-warning);
+  background: #fff9ef;
+}
+
+.tcard--today {
+  border-left-color: var(--color-warning);
+  background: #fff5e4;
+}
+
+.tcard--overdue {
+  border-left-color: var(--color-danger);
+  background: #fff1f1;
+}
+
+.tcard--none {
+  border-left-color: #c9cfdb;
+  background: #f6f7fb;
+}
+
+/* 优先级序号 */
+.tcard__rank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 48rpx;
+  height: 48rpx;
+  margin-right: 16rpx;
+  border-radius: 14rpx;
+  font-size: 24rpx;
   font-weight: 700;
-  line-height: 1.2;
+  color: var(--color-primary);
+  background: #e3ecff;
+}
+
+.tcard__rank--top {
+  color: #ffffff;
+  background: var(--color-primary);
+}
+
+.tcard__rank--danger {
+  color: #ffffff;
+  background: var(--color-danger);
+}
+
+.tcard__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.tcard__row {
+  display: flex;
+  align-items: center;
+}
+
+.tcard__version {
+  font-size: 30rpx;
+  font-weight: 700;
   color: var(--color-text);
 }
 
-.task-line__qty {
-  margin-left: 12rpx;
-  font-size: 25rpx;
+.tcard__qty {
+  margin-left: 10rpx;
+  font-size: 22rpx;
   color: var(--color-text-secondary);
 }
 
-.task-line__tag {
+/* 单号尾号：同版本多条任务时用来区分 */
+.tcard__no {
+  margin-left: 10rpx;
+  font-size: 20rpx;
+  color: var(--color-text-muted);
+}
+
+.tcard__tag {
   margin-left: auto;
+  transform: scale(0.9);
+  transform-origin: right center;
 }
 
-.task-progress {
-  height: 12rpx;
-  margin-top: 18rpx;
-  border-radius: 999rpx;
+/* 交付日期 */
+.tcard__due {
+  display: flex;
+  align-items: center;
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: var(--color-text-muted);
+}
+
+.tcard__due-date {
+  margin-right: 10rpx;
+}
+
+.tcard__due-tip {
+  padding: 2rpx 10rpx;
+  border-radius: 8rpx;
+  font-size: 20rpx;
+  color: var(--color-text-secondary);
+  background: #eef2fb;
+}
+
+.tcard__due--soon .tcard__due-tip,
+.tcard__due--today .tcard__due-tip {
+  color: #b45309;
+  background: #ffeccc;
+}
+
+.tcard__due--overdue .tcard__due-date {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.tcard__due--overdue .tcard__due-tip {
+  color: #ffffff;
+  background: var(--color-danger);
+}
+
+/* 进度条 */
+.tcard__bar {
+  height: 8rpx;
+  margin-top: 12rpx;
   overflow: hidden;
-  background: #eef1f7;
+  border-radius: 999rpx;
+  background: #e8ecf5;
 }
 
-.task-progress__fill {
+.tcard__bar-fill {
   height: 100%;
   border-radius: 999rpx;
   background: linear-gradient(90deg, #2f6bff 0%, #5c8dff 100%);
 }
 
-.task-progress__text {
+/* 齐套指标 */
+.tcard__nums {
+  display: flex;
+  flex-wrap: wrap;
   margin-top: 10rpx;
-  font-size: 21rpx;
+  font-size: 20rpx;
   color: var(--color-text-muted);
 }
 
-.task-kpis {
-  display: flex;
-  margin-top: 18rpx;
-  padding-top: 20rpx;
-  border-top: 1rpx dashed var(--color-border);
+.tcard__num {
+  margin-right: 16rpx;
 }
 
-.task-kpi {
-  flex: 1;
-  font-size: 22rpx;
-  color: var(--color-text-secondary);
-}
-
-.task-kpi__strong,
-.task-kpi__danger,
-.task-kpi__warning {
-  margin: 0 4rpx;
-  font-size: 28rpx;
-  font-weight: 700;
-}
-
-.task-kpi__strong {
-  color: var(--color-primary);
-}
-
-.task-kpi__danger {
+.tcard__num--danger {
+  font-weight: 600;
   color: var(--color-danger);
 }
 
-.task-kpi__warning {
+.tcard__num--warning {
+  font-weight: 600;
+  color: var(--color-warning);
+}
+
+/* 手动调整优先级 */
+.tcard__ops {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-left: 12rpx;
+}
+
+.tcard__op {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48rpx;
+  height: 42rpx;
+  margin: 3rpx 0;
+  border-radius: 10rpx;
+  font-size: 24rpx;
+  color: var(--color-primary);
+  background: #e3ecff;
+}
+
+.tcard__op--off {
+  color: #c3c9d6;
+  background: #f0f2f7;
+}
+
+.tcard__op--hover {
+  opacity: 0.6;
+}
+
+.task-hint {
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  color: var(--color-text-muted);
+}
+
+.task-hint__danger {
+  color: var(--color-danger);
+}
+
+.task-hint__warning {
   color: var(--color-warning);
 }
 

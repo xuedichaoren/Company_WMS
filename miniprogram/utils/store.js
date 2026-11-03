@@ -11,7 +11,7 @@ const STORAGE_KEY = 'wms_demo_state_v1'
 const SESSION_KEY = 'wms_demo_session_v1'
 
 /** 数据结构版本，用于存量数据迁移 */
-const SCHEMA_VERSION = 3
+const SCHEMA_VERSION = 4
 
 /** 兜底分类：删除某个分类时，其下商品默认归到这里；本分类不可删除 */
 const FALLBACK_CATEGORY = '未分类'
@@ -94,6 +94,89 @@ function formatDayLabel(createdAt) {
 /** 深拷贝，避免页面直接改动仓库内对象 */
 function clone(data) {
   return JSON.parse(JSON.stringify(data))
+}
+
+// ============================================================
+// 交付日期
+// ============================================================
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/**
+ * 把 2026-11-08 解析成当天 0 点的时间戳
+ * 用 0 点而不是当前时刻，保证「同一天」的任务权重一致
+ * @param {string} text YYYY-MM-DD
+ * @returns {number} 非法格式返回 0
+ */
+function parseDayTime(text) {
+  const match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(text || '').trim())
+  if (!match) return 0
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  if (month < 1 || month > 12 || day < 1 || day > 31) return 0
+
+  const date = new Date(year, month - 1, day)
+  // 2 月 30 日这类非法日期会被 Date 自动顺延，回读对不上就判定为非法
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return 0
+  }
+  return date.getTime()
+}
+
+/** 日期选择器默认值：7 天后 */
+function defaultDueDate(createdAt) {
+  const base = new Date(createdAt || Date.now())
+  return dayKey(new Date(base.getFullYear(), base.getMonth(), base.getDate() + 7))
+}
+
+/**
+ * 交付日期展示信息：剩余天数、紧张程度
+ * level：overdue 逾期 / today 今天 / soon 3 天内 / normal 正常 / none 未设置
+ * @param {string} dueDate YYYY-MM-DD
+ */
+function dueInfoOf(dueDate) {
+  const time = parseDayTime(dueDate)
+  if (!time) {
+    return {
+      dueDate: '',
+      dueText: '未设置',
+      dueFull: '未设置交付日期',
+      dueLevel: 'none',
+      dueTip: '未设置交付日期',
+      dueDays: null
+    }
+  }
+
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const days = Math.round((time - today) / DAY_MS)
+
+  let dueLevel = 'normal'
+  let dueTip = `还剩 ${days} 天`
+  if (days < 0) {
+    dueLevel = 'overdue'
+    dueTip = `逾期 ${-days} 天`
+  } else if (days === 0) {
+    dueLevel = 'today'
+    dueTip = '今天交付'
+  } else if (days === 1) {
+    dueLevel = 'soon'
+    dueTip = '明天交付'
+  } else if (days <= 3) {
+    dueLevel = 'soon'
+    dueTip = `还剩 ${days} 天`
+  }
+
+  return {
+    dueDate,
+    dueText: dueDate.slice(5),
+    dueFull: `交付 ${dueDate}`,
+    dueLevel,
+    dueTip,
+    dueDays: days
+  }
 }
 
 // ============================================================
@@ -510,9 +593,10 @@ function makeTaskId(createdAt, seq) {
   return `T-${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${seqText}`
 }
 
-/** 初始生产任务：V3.1 试产 20 台，方便首次进入就能看到齐套分析 */
+/** 初始生产任务：两条并存，方便首次进入就看到多任务优先级与齐套分析 */
 function buildSeedTasks() {
   const now = Date.now()
+  const dueOf = (days) => dayKey(new Date(now + days * DAY_MS))
   return [
     {
       id: makeTaskId(now, 1),
@@ -524,9 +608,27 @@ function buildSeedTasks() {
       status: 'doing',
       operator: '张伟',
       remark: '首批试产',
+      dueDate: dueOf(5),
+      sortWeight: parseDayTime(dueOf(5)),
       createdAt: now,
       finishedAt: 0,
       time: formatRecordTime(now)
+    },
+    {
+      id: makeTaskId(now, 2),
+      bomId: 'BOM-V30',
+      version: 'V3.0',
+      name: '机器人头部机芯 V3.0',
+      planQty: 10,
+      doneQty: 0,
+      status: 'doing',
+      operator: '李娜',
+      remark: '客户补单',
+      dueDate: dueOf(9),
+      sortWeight: parseDayTime(dueOf(9)),
+      createdAt: now - 60 * 1000,
+      finishedAt: 0,
+      time: formatRecordTime(now - 60 * 1000)
     }
   ]
 }
@@ -601,7 +703,7 @@ function createInitialState() {
     goodsSeq: 1000 + SEED_GOODS.length,
     boms: clone(SEED_BOMS),
     tasks: buildSeedTasks(),
-    taskSeq: 1
+    taskSeq: buildSeedTasks().length
   }
 }
 
@@ -676,6 +778,18 @@ function migrateState(data) {
   ;(data.goods || []).forEach((goods) => {
     if (typeof goods.supplier !== 'string') {
       goods.supplier = ''
+      changed = true
+    }
+  })
+
+  // v3 → v4：任务增加交付日期与排序权重，老任务按创建时间 +7 天补一个交付日期
+  ;(data.tasks || []).forEach((task) => {
+    if (!parseDayTime(task.dueDate)) {
+      task.dueDate = defaultDueDate(task.createdAt)
+      changed = true
+    }
+    if (typeof task.sortWeight !== 'number' || !isFinite(task.sortWeight)) {
+      task.sortWeight = parseDayTime(task.dueDate) || task.createdAt || 0
       changed = true
     }
   })
@@ -1659,14 +1773,49 @@ function getRawTask(taskId) {
   return loadState().tasks.find((item) => item.id === taskId) || null
 }
 
-/** 给任务补上进度、齐套概览 */
+/** 排序权重：优先用手动调整过的权重，没调过就按交付日期 */
+function taskWeightOf(task) {
+  if (typeof task.sortWeight === 'number' && isFinite(task.sortWeight)) return task.sortWeight
+  return parseDayTime(task.dueDate) || task.createdAt || 0
+}
+
+/**
+ * 任务排序：进行中在前，再按优先级权重升序（默认即交付日期由早到晚），
+ * 权重相同按创建时间先后，保证顺序稳定
+ */
+function compareTaskOrder(a, b) {
+  const aDone = a.status === 'done' ? 1 : 0
+  const bDone = b.status === 'done' ? 1 : 0
+  if (aDone !== bDone) return aDone - bDone
+  const diff = taskWeightOf(a) - taskWeightOf(b)
+  if (diff !== 0) return diff
+  return (a.createdAt || 0) - (b.createdAt || 0)
+}
+
+/** 把日期文本规范成 YYYY-MM-DD，非法返回空串 */
+function normalizeDay(text) {
+  const time = parseDayTime(text)
+  if (!time) return ''
+  return dayKey(new Date(time))
+}
+
+/** 给任务补上进度、齐套概览与交付日期 */
 function decorateTask(task) {
   const analysis = analyzeBom(getRawBom(task.bomId), task.planQty)
   const progress =
     task.planQty > 0 ? Math.min(100, Math.round((task.doneQty / task.planQty) * 100)) : 0
+  const due = dueInfoOf(task.dueDate)
+  // 已完成的任务不再按逾期提醒，只保留交付日期
+  if (task.status === 'done') {
+    due.dueLevel = 'done'
+    due.dueTip = '已完成'
+  }
 
-  return Object.assign({}, task, {
+  return Object.assign({}, task, due, {
     statusText: task.status === 'done' ? '已完成' : '进行中',
+    // 同版本可能有多条任务，用单号尾号区分
+    idShort: String(task.id || '').slice(-2),
+    remarkText: task.remark || '',
     remainQty: Math.max(0, task.planQty - task.doneQty),
     progress,
     hasBom: !!analysis,
@@ -1674,11 +1823,11 @@ function decorateTask(task) {
   })
 }
 
-/** 任务列表（从新到旧） */
+/** 任务列表（进行中在前，再按优先级） */
 function listTasks() {
   return loadState()
     .tasks.slice()
-    .sort((a, b) => b.createdAt - a.createdAt)
+    .sort(compareTaskOrder)
     .map(decorateTask)
 }
 
@@ -1692,29 +1841,98 @@ function getTaskAnalysis(taskId) {
   }
 }
 
-/** 当前任务：最近创建且未完成的一条 */
+/** 当前任务：优先级最高的未完成任务（默认就是交付日期最早的那条） */
 function getCurrentTask() {
-  const doing = loadState()
-    .tasks.filter((task) => task.status === 'doing')
-    .sort((a, b) => b.createdAt - a.createdAt)
-  return doing.length ? decorateTask(doing[0]) : null
+  const doing = listTasks().filter((task) => task.status === 'doing')
+  return doing.length ? doing[0] : null
 }
 
-/** 首页「当前任务」卡片数据 */
-function getTaskOverview() {
-  const task = getCurrentTask()
-  if (!task) return { task: null }
+/**
+ * 首页任务看板：所有进行中的任务，同等级平铺
+ * 每条补上优先级序号与能否上移/下移，页面直接渲染
+ */
+function getTaskBoard() {
+  const tasks = listTasks().filter((task) => task.status === 'doing')
+  const board = tasks.map((task, index) =>
+    Object.assign({}, task, {
+      priority: index + 1,
+      canMoveUp: index > 0,
+      canMoveDown: index < tasks.length - 1
+    })
+  )
+
   return {
-    task,
-    version: task.version,
-    planQty: task.planQty,
-    doneQty: task.doneQty,
-    progress: task.progress,
-    maxAssemble: task.summary ? task.summary.maxAssemble : 0,
-    shortKinds: task.summary ? task.summary.shortKinds : 0,
-    warnKinds: task.summary ? task.summary.warnKinds : 0,
-    canFinish: task.summary ? task.summary.canFinish : false
+    tasks: board,
+    total: board.length,
+    overdueCount: board.filter((task) => task.dueLevel === 'overdue').length,
+    shortCount: board.filter((task) => task.summary && task.summary.shortKinds > 0).length
   }
+}
+
+/**
+ * 手动调整优先级：只在进行中的任务之间挪动
+ * 做法是按新顺序重新分配整列权重，这样同一天交付的两个任务也能互换位置
+ * @param {string} taskId
+ * @param {'up'|'down'} direction
+ */
+function moveTask(taskId, direction) {
+  const current = loadState()
+  const doing = current.tasks
+    .filter((task) => task.status === 'doing')
+    .sort(compareTaskOrder)
+
+  const index = doing.findIndex((task) => task.id === taskId)
+  if (index === -1) return { ok: false, message: '任务不存在或已完成' }
+
+  const target = direction === 'up' ? index - 1 : index + 1
+  if (target < 0) return { ok: false, message: '已经是最高优先级' }
+  if (target >= doing.length) return { ok: false, message: '已经是最低优先级' }
+
+  // 原有权重先保证严格递增，再按新顺序回填，避免「同一天」导致交换无效
+  const weights = doing.map(taskWeightOf).sort((a, b) => a - b)
+  for (let i = 1; i < weights.length; i += 1) {
+    if (weights[i] <= weights[i - 1]) weights[i] = weights[i - 1] + 1
+  }
+
+  const ids = doing.map((task) => task.id)
+  const moved = ids.splice(index, 1)[0]
+  ids.splice(target, 0, moved)
+
+  ids.forEach((id, i) => {
+    const task = current.tasks.find((item) => item.id === id)
+    if (task) task.sortWeight = weights[i]
+  })
+
+  persist()
+  return { ok: true, position: target + 1 }
+}
+
+/** 恢复「按交付日期自动排序」：把权重全部重置回交付日期 */
+function resetTaskOrder() {
+  loadState().tasks.forEach((task) => {
+    task.sortWeight = parseDayTime(task.dueDate) || task.createdAt || 0
+  })
+  persist()
+  return { ok: true }
+}
+
+/**
+ * 修改交付日期
+ * 权重同步回到新日期对应的位置，相当于这条任务重新按日期插队
+ * @param {string} taskId
+ * @param {string} dueDate YYYY-MM-DD
+ */
+function setTaskDueDate(taskId, dueDate) {
+  const task = getRawTask(taskId)
+  if (!task) return { ok: false, message: '任务不存在' }
+
+  const day = normalizeDay(dueDate)
+  if (!day) return { ok: false, message: '请选择交付日期' }
+
+  task.dueDate = day
+  task.sortWeight = parseDayTime(day)
+  persist()
+  return { ok: true, task: decorateTask(task) }
 }
 
 /**
@@ -1733,6 +1951,8 @@ function saveTask(payload) {
 
   current.taskSeq = (current.taskSeq || 0) + 1
   const createdAt = Date.now()
+  // 交付日期必填，没选就默认 7 天后，保证按日期排序时这条任务有确定位置
+  const dueDate = normalizeDay(data.dueDate) || defaultDueDate(createdAt)
   const task = {
     id: makeTaskId(createdAt, current.taskSeq),
     bomId: bom.id,
@@ -1743,6 +1963,8 @@ function saveTask(payload) {
     status: 'doing',
     operator: data.operator || '张伟',
     remark: (data.remark || '').trim(),
+    dueDate,
+    sortWeight: parseDayTime(dueDate),
     createdAt,
     finishedAt: 0,
     time: formatRecordTime(createdAt)
@@ -1930,7 +2152,11 @@ module.exports = {
   listTasks,
   getTaskAnalysis,
   getCurrentTask,
-  getTaskOverview,
+  getTaskBoard,
+  moveTask,
+  resetTaskOrder,
+  setTaskDueDate,
+  dueInfoOf,
   saveTask,
   reportTask,
   finishTask,

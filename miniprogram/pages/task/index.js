@@ -45,11 +45,44 @@ function buildFilters(analysis) {
   return FILTERS.map((item) => Object.assign({}, item, { count: counts[item.key] || 0 }))
 }
 
+/** 日期文本：2026-11-08 */
+function dayText(date) {
+  const pad = (n) => (n < 10 ? `0${n}` : `${n}`)
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+/** 新建任务默认交付日期：7 天后 */
+function defaultDue() {
+  const now = new Date()
+  return dayText(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7))
+}
+
+/**
+ * 任务列表：按优先级排序，进行中的带序号与可移动标记
+ * 已完成的排在最后、不参与手动排序
+ */
+function buildTaskList() {
+  const all = store.listTasks()
+  const doingCount = all.filter((task) => task.status === 'doing').length
+  let index = 0
+
+  return all.map((task) => {
+    const isDoing = task.status === 'doing'
+    const priority = isDoing ? ++index : 0
+    return Object.assign({}, task, {
+      priority,
+      canMoveUp: isDoing && priority > 1,
+      canMoveDown: isDoing && priority < doingCount
+    })
+  })
+}
+
 Page({
   data: {
     // 当前查看的任务
     taskId: '',
     task: null,
+    taskRank: 0,
     analysis: null,
     summary: null,
     // 物料列表（已按筛选条件过滤）
@@ -66,6 +99,8 @@ Page({
     bomNames: [],
     bomIndex: 0,
     planQty: '20',
+    dueDate: '',
+    todayText: '',
     remark: '',
     // 报工弹层
     showReporter: false,
@@ -79,6 +114,7 @@ Page({
   },
 
   onLoad(options) {
+    this.setData({ todayText: dayText(new Date()), dueDate: defaultDue() })
     if (options && options.taskId) {
       this.setData({ taskId: options.taskId })
     }
@@ -145,10 +181,17 @@ Page({
       tipLevel = 'danger'
     }
 
+    // 当前任务在队列中的优先级位置（已完成任务不参与排序）
+    let taskRank = 0
+    if (task.status === 'doing') {
+      taskRank = tasks.filter((item) => item.status === 'doing').findIndex((item) => item.id === targetId) + 1
+    }
+
     this.setData(
       {
         taskId: targetId,
         task,
+        taskRank,
         analysis,
         summary: analysis ? analysis.summary : null,
         tasks,
@@ -182,14 +225,49 @@ Page({
     this.setData({ filter: key }, () => this.applyFilter())
   },
 
-  /** 打开任务列表弹层（切换 / 删除 / 新建） */
+  /** 打开任务列表弹层（切换 / 排序 / 删除 / 新建） */
   handleSwitchTask() {
-    const taskList = store.listTasks()
+    const taskList = buildTaskList()
     if (!taskList.length) {
       this.handleCreate()
       return
     }
     this.setData({ showTaskList: true, taskList })
+  },
+
+  /**
+   * 手动调整优先级：上移 / 下移
+   * 结果写进任务权重，首页与这里看到的是同一个顺序
+   */
+  handleTaskMove(e) {
+    const { id, dir } = e.currentTarget.dataset
+    if (!id || !dir) return
+
+    const result = store.moveTask(id, dir)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+
+    this.setData({ taskList: buildTaskList() })
+    this.refresh()
+    wx.showToast({ title: `已调整为第 ${result.position} 位`, icon: 'none' })
+  },
+
+  /** 恢复按交付日期自动排序（覆盖手动顺序） */
+  handleResetOrder() {
+    wx.showModal({
+      title: '按交付日期重排',
+      content: '将按交付日期从早到晚重新排列所有进行中的任务，手动调整过的顺序会被覆盖。',
+      confirmText: '重排',
+      success: (res) => {
+        if (!res.confirm) return
+        store.resetTaskOrder()
+        this.setData({ taskList: buildTaskList() })
+        this.refresh()
+        wx.showToast({ title: '已按交付日期重排', icon: 'none' })
+      }
+    })
   },
 
   closeTaskList() {
@@ -306,8 +384,28 @@ Page({
       bomNames: boms.map((item) => `${item.version} · ${item.name}`),
       bomIndex: index,
       planQty: '20',
+      dueDate: defaultDue(),
       remark: ''
     })
+  },
+
+  /** 新建任务：选择交付日期 */
+  handleDueChange(e) {
+    this.setData({ dueDate: e.detail.value })
+  },
+
+  /** 修改当前任务的交付日期（点任务卡上的日期直接选） */
+  handleTaskDueChange(e) {
+    const task = this.data.task
+    if (!task) return
+
+    const result = store.setTaskDueDate(task.id, e.detail.value)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    this.refresh()
+    wx.showToast({ title: '交付日期已更新', icon: 'none' })
   },
 
   closeCreator() {
@@ -357,6 +455,7 @@ Page({
     const result = store.saveTask({
       bomId: bom.id,
       planQty,
+      dueDate: this.data.dueDate,
       remark: this.data.remark,
       operator: user ? user.name : '张伟'
     })

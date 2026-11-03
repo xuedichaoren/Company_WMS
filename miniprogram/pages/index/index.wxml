@@ -33,61 +33,103 @@
     </view>
   </view>
 
-  <!-- ==================== 当前生产任务 ==================== -->
-  <view
-    class="section task-section"
-    wx:if="{{taskOverview.task}}"
-    hover-class="task-section--hover"
-    bindtap="handleTaskTap"
-  >
+  <!-- ==================== 生产任务（多任务同等级平铺） ==================== -->
+  <view class="section">
     <view class="section__header">
-      <text class="section__title">当前任务</text>
-      <text class="section__more">齐套分析 ›</text>
+      <text class="section__title">生产任务</text>
+      <text class="section__more" bindtap="handleTaskManage" wx:if="{{taskBoard.total}}">
+        {{taskBoard.total}} 个进行中 · 管理 ›
+      </text>
+      <text class="section__more" bindtap="handleTaskManage" wx:else>新建 ›</text>
     </view>
 
-    <view class="task-line">
-      <text class="task-line__version">{{taskOverview.version}}</text>
-      <text class="task-line__qty">× {{taskOverview.planQty}} 台</text>
-      <text
-        class="tag {{taskOverview.canFinish ? 'tag--success' : 'tag--danger'}} task-line__tag"
+    <view class="task-list" wx:if="{{taskBoard.total}}">
+      <view
+        class="tcard tcard--{{item.dueLevel}}"
+        wx:for="{{taskBoard.tasks}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        hover-class="tcard--hover"
+        bindtap="handleTaskTap"
       >
-        {{taskOverview.canFinish ? '物料齐套' : '物料不足'}}
-      </text>
+        <!-- 优先级序号：按交付日期自动排，可手动上移 / 下移 -->
+        <view
+          class="tcard__rank {{item.dueLevel === 'overdue' ? 'tcard__rank--danger' : (item.priority === 1 ? 'tcard__rank--top' : '')}}"
+        >
+          {{item.priority}}
+        </view>
+
+        <view class="tcard__body">
+          <view class="tcard__row">
+            <text class="tcard__version">{{item.version}}</text>
+            <text class="tcard__qty">× {{item.planQty}} 台</text>
+            <text class="tcard__no">#{{item.idShort}}</text>
+            <text
+              class="tag {{item.summary.canFinish ? 'tag--success' : 'tag--danger'}} tcard__tag"
+              wx:if="{{item.summary}}"
+            >
+              {{item.summary.canFinish ? '物料齐套' : '物料不足'}}
+            </text>
+            <text class="tag tag--warning tcard__tag" wx:else>无 BOM</text>
+          </view>
+
+          <!-- 交付日期：逾期红、3 天内橙 -->
+          <view class="tcard__due tcard__due--{{item.dueLevel}}">
+            <text class="tcard__due-date">{{item.dueFull}}</text>
+            <text class="tcard__due-tip">{{item.dueTip}}</text>
+          </view>
+
+          <view class="tcard__bar">
+            <view class="tcard__bar-fill" style="width: {{item.progress}}%;"></view>
+          </view>
+
+          <view class="tcard__nums" wx:if="{{item.summary}}">
+            <text class="tcard__num">已完工 {{item.doneQty}}/{{item.planQty}}</text>
+            <text class="tcard__num">可做 {{item.summary.maxAssemble}} 台</text>
+            <text class="tcard__num {{item.summary.shortKinds ? 'tcard__num--danger' : ''}}">
+              缺料 {{item.summary.shortKinds}}
+            </text>
+            <text class="tcard__num {{item.summary.warnKinds ? 'tcard__num--warning' : ''}}">
+              预警 {{item.summary.warnKinds}}
+            </text>
+          </view>
+        </view>
+
+        <!-- 手动调整优先级：任务多于一个时才出现 -->
+        <view class="tcard__ops" wx:if="{{taskBoard.total > 1}}">
+          <view
+            class="tcard__op {{item.canMoveUp ? '' : 'tcard__op--off'}}"
+            data-id="{{item.id}}"
+            data-dir="up"
+            hover-class="tcard__op--hover"
+            catchtap="handleTaskMove"
+          >↑</view>
+          <view
+            class="tcard__op {{item.canMoveDown ? '' : 'tcard__op--off'}}"
+            data-id="{{item.id}}"
+            data-dir="down"
+            hover-class="tcard__op--hover"
+            catchtap="handleTaskMove"
+          >↓</view>
+        </view>
+      </view>
+
+      <!-- 逾期 / 缺料提醒 -->
+      <view class="task-hint" wx:if="{{taskBoard.overdueCount || taskBoard.shortCount}}">
+        <text class="task-hint__danger" wx:if="{{taskBoard.overdueCount}}">
+          {{taskBoard.overdueCount}} 个任务已逾期
+        </text>
+        <text wx:if="{{taskBoard.overdueCount && taskBoard.shortCount}}"> · </text>
+        <text class="task-hint__warning" wx:if="{{taskBoard.shortCount}}">
+          {{taskBoard.shortCount}} 个任务缺料
+        </text>
+      </view>
     </view>
 
-    <view class="task-progress">
-      <view class="task-progress__fill" style="width: {{taskOverview.progress}}%;"></view>
+    <!-- 没有进行中的任务 -->
+    <view class="task-empty-line" wx:else bindtap="handleTaskManage">
+      暂无进行中的生产任务，点击创建并查看物料齐套
     </view>
-    <view class="task-progress__text">
-      已完工 {{taskOverview.doneQty}} / {{taskOverview.planQty}} 台
-    </view>
-
-    <view class="task-kpis">
-      <text class="task-kpi">
-        最多可做
-        <text class="task-kpi__strong">{{taskOverview.maxAssemble}}</text>
-        台
-      </text>
-      <text class="task-kpi">
-        缺料
-        <text class="task-kpi__danger">{{taskOverview.shortKinds}}</text>
-        种
-      </text>
-      <text class="task-kpi">
-        做完预警
-        <text class="task-kpi__warning">{{taskOverview.warnKinds}}</text>
-        种
-      </text>
-    </view>
-  </view>
-
-  <!-- 没有进行中的任务 -->
-  <view class="section task-section" wx:else hover-class="task-section--hover" bindtap="handleTaskTap">
-    <view class="section__header">
-      <text class="section__title">当前任务</text>
-      <text class="section__more">去创建 ›</text>
-    </view>
-    <view class="task-empty-line">暂无进行中的生产任务，点击创建并查看物料齐套</view>
   </view>
 
   <!-- ==================== 快捷操作 ==================== -->
