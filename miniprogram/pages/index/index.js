@@ -88,6 +88,9 @@ Page({
       stats: []
     },
     records: [],
+    // 领料批次明细弹层
+    showDetail: false,
+    detail: { title: '', rows: [], lines: [], remark: '' },
     // 当前生产任务（来源：utils/store.js，含齐套摘要）
     taskOverview: { task: null },
     // 快捷操作配置（静态，无需每次 setData）
@@ -130,7 +133,7 @@ Page({
         warehouseName: app.globalData.warehouse.name,
         stats: overview.stats
       },
-      records: store.listRecords({ limit: 5 }),
+      records: store.listRecentOps({ limit: 5 }),
       taskOverview: store.getTaskOverview()
     })
   },
@@ -264,12 +267,34 @@ Page({
   },
 
   /**
-   * 点击最近操作记录，弹窗查看详情
+   * 点击最近操作记录
+   * 领料：一次报工会领用多种物料，用弹层列出明细，和日志页的领料记录对得上；
+   * 普通出入库：仍用系统弹窗，字段与日志页保持一致
    */
   handleRecordTap(e) {
     const { index } = e.currentTarget.dataset
     const record = this.data.records[index]
     if (!record) return
+
+    if (record.kind === 'pick') {
+      this.setData({
+        showDetail: true,
+        detail: {
+          title: '生产领料明细',
+          rows: [
+            { label: '生产任务', value: record.taskId },
+            { label: '机芯版本', value: record.taskVersion || '-' },
+            { label: '本次报工', value: `${record.taskQty} 台` },
+            { label: '领用物料', value: `${record.itemCount} 种` },
+            { label: '操作人', value: record.operator },
+            { label: '时间', value: record.time }
+          ],
+          lines: record.lines,
+          remark: record.remark || ''
+        }
+      })
+      return
+    }
 
     const lines = [
       `单号：${record.id}`,
@@ -281,8 +306,6 @@ Page({
       `操作人：${record.operator}`,
       `时间：${record.time}`
     ]
-    // 生产领料记录会带上具体领用明细
-    if (record.detailText) lines.push('', '领用物料：', record.detailText)
     if (record.remark) lines.push(`备注：${record.remark}`)
 
     wx.showModal({
@@ -291,5 +314,19 @@ Page({
       showCancel: false,
       confirmText: '知道了'
     })
-  }
+  },
+
+  /** 关闭领料明细弹层 */
+  closeDetail() {
+    this.setData({ showDetail: false })
+  },
+
+  /** 从领料弹层跳到操作日志的「领料」筛选，看这一批的逐条记录 */
+  goLog() {
+    this.setData({ showDetail: false })
+    wx.navigateTo({ url: '/pages/log/index?type=pick' })
+  },
+
+  /** 阻止弹层内部点击穿透到遮罩 */
+  noop() {}
 })

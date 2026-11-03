@@ -40,6 +40,14 @@ const STOCK_STATUS_TEXT = {
   empty: '缺货'
 }
 
+/**
+ * 出入库记录上限
+ * 生产报工会按物料逐条写入，记录增长很快；小程序单个 key 上限 1MB，
+ * 超限后 setStorageSync 会静默失败（表现为「提示成功但重启后数据丢了」），
+ * 这里保留最近 2000 条，超出部分从最早的开始丢弃。
+ */
+const MAX_RECORDS = 2000
+
 // ============================================================
 // 工具函数
 // ============================================================
@@ -682,6 +690,16 @@ function migrateState(data) {
   return data
 }
 
+/**
+ * 记录上限保护：超出时按时间倒序保留最新的，丢弃最早的
+ * 不假设数组已排序（老数据 / 迁移数据可能是升序），超限时才排一次
+ */
+function trimRecords(data) {
+  if (data.records.length <= MAX_RECORDS) return
+  data.records.sort((a, b) => b.createdAt - a.createdAt)
+  data.records = data.records.slice(0, MAX_RECORDS)
+}
+
 function persist() {
   try {
     wx.setStorageSync(STORAGE_KEY, state)
@@ -1007,7 +1025,115 @@ function listRecords(options) {
     result = result.slice(0, opts.limit)
   }
 
+  // 时间文案按当前时间重新计算：记录里存的是写入时刻的相对时间，
+  // 隔天再看会把「昨天 09:15」显示成「09:15」
+  result.forEach((item) => {
+    item.time = formatRecordTime(item.createdAt)
+  })
+
   return clone(result)
+}
+
+/** 生产领料记录：type 记为出库，靠 taskId 区分 */
+function isPickRecord(record) {
+  return record.type === 'out' && !!record.taskId
+}
+
+/**
+ * 最近操作：按「一次操作」聚合，供首页展示
+ * 生产报工一次会按物料写十几条领料记录，原样列出会把首页挤满，
+ * 也会和「今日出库」按单统计的数字对不上。
+ * 这里把同一批报工（taskId + createdAt 相同）合成一条，物料明细放在 lines 里。
+ * @param {{limit?: number}} [options]
+ */
+function listRecentOps(options) {
+  const opts = options || {}
+  const limit = opts.limit || 5
+  const sorted = loadState()
+    .records.slice()
+    .sort((a, b) => b.createdAt - a.createdAt)
+
+  const ops = []
+  const pickMap = {}
+
+  sorted.forEach((record) => {
+    const time = formatRecordTime(record.createdAt)
+
+    if (isPickRecord(record)) {
+      const key = `pick-${record.taskId}-${record.createdAt}`
+      const line = {
+        id: record.id,
+        title: record.title,
+        sku: record.sku,
+        spec: record.spec,
+        quantity: record.quantity,
+        unit: record.unit
+      }
+
+      const exist = pickMap[key]
+      if (exist) {
+        exist.lines.push(line)
+        exist.itemCount += 1
+        exist.totalQty += record.quantity
+        exist.metaTop = `${exist.taskQty} 台 · ${exist.itemCount} 种物料`
+        exist.qtyText = `${exist.itemCount} 种`
+        return
+      }
+
+      const version = record.taskVersion || ''
+      const taskQty = record.taskQty || 0
+      const op = {
+        key,
+        kind: 'pick',
+        typeText: '领料',
+        title: version ? `${version} 机芯生产领料` : '机芯生产领料',
+        metaTop: `${taskQty} 台 · 1 种物料`,
+        metaBottom: `${time} · ${record.operator}`,
+        qtyText: '1 种',
+        quantity: record.quantity,
+        unit: record.unit,
+        totalQty: record.quantity,
+        itemCount: 1,
+        lines: [line],
+        operator: record.operator,
+        location: record.location || '',
+        remark: record.remark || '',
+        taskId: record.taskId,
+        taskVersion: version,
+        taskQty,
+        createdAt: record.createdAt,
+        time
+      }
+      pickMap[key] = op
+      ops.push(op)
+      return
+    }
+
+    ops.push({
+      key: `rec-${record.id}`,
+      kind: record.type,
+      id: record.id,
+      typeText: record.typeText,
+      title: record.title,
+      sku: record.sku || '',
+      spec: record.spec || '',
+      metaTop: record.spec ? `${record.sku} · ${record.spec}` : record.sku,
+      metaBottom: `${time} · ${record.operator} · ${record.location || '未设置库位'}`,
+      qtyText: `${record.type === 'in' ? '+' : '-'}${record.quantity}${record.unit}`,
+      quantity: record.quantity,
+      unit: record.unit,
+      totalQty: record.quantity,
+      itemCount: 0,
+      lines: [],
+      operator: record.operator,
+      location: record.location || '',
+      remark: record.remark || '',
+      createdAt: record.createdAt,
+      time
+    })
+  })
+
+  return clone(ops.slice(0, limit))
 }
 
 /**
@@ -1061,6 +1187,7 @@ function addRecord(payload) {
   goods.stock = type === 'in' ? goods.stock + quantity : goods.stock - quantity
 
   current.records.unshift(record)
+  trimRecords(current)
   persist()
 
   return { ok: true, record: Object.assign({}, record) }
@@ -1077,10 +1204,20 @@ function getOverview() {
   let inboundCount = 0
   let outboundCount = 0
 
+  const seenPick = {}
   current.records.forEach((record) => {
     if (dayKey(new Date(record.createdAt)) !== today) return
-    if (record.type === 'in') inboundCount += 1
-    else outboundCount += 1
+    if (record.type === 'in') {
+      inboundCount += 1
+      return
+    }
+    // 生产领料按物料逐条写入，统计「单数」时同一次报工只算一单
+    if (record.taskId) {
+      const key = `${record.taskId}-${record.createdAt}`
+      if (seenPick[key]) return
+      seenPick[key] = true
+    }
+    outboundCount += 1
   })
 
   const totalStock = current.goods.reduce((sum, goods) => sum + goods.stock, 0)
@@ -1617,7 +1754,8 @@ function saveTask(payload) {
 }
 
 /**
- * 生产报工：按 BOM 扣减物料库存，并生成一条领料出库记录
+ * 生产报工：按 BOM 扣减物料库存，每种物料写一条「领料」出库记录
+ * 备注统一为「生产任务领用 · 版本 × 台数」，日志页可逐条核对少了哪些料
  * 物料不足时整单拒绝，避免出现「报了一半」的中间状态
  * @param {string} taskId
  * @param {number} qty 本次完工台数
@@ -1674,37 +1812,39 @@ function reportTask(taskId, qty) {
       item.type === 'out' && dayKey(new Date(item.createdAt)) === dayKey(new Date(createdAt))
   ).length
 
-  const detailLines = lines
-    .slice(0, 12)
-    .map((line) => `${line.goods.title} ${line.need}${line.goods.unit}`)
-  if (lines.length > 12) detailLines.push(`… 共 ${lines.length} 种物料`)
-
-  const record = {
-    id: makeRecordId('out', createdAt, todayCount + 1),
+  // 每种物料单独一条领料记录，备注统一标记来源，日志里能一眼看出少了哪些料
+  const pickRemark = `生产任务领用 · ${bom.version} × ${amount} 台`
+  const records = lines.map((line, index) => ({
+    id: makeRecordId('out', createdAt, todayCount + index + 1),
     type: 'out',
     typeText: '领料',
-    goodsId: bom.id,
-    title: `${bom.version} 机芯生产领料`,
-    sku: bom.id,
-    spec: `共 ${lines.length} 种物料`,
-    quantity: amount,
-    unit: '台',
+    goodsId: line.goods.id,
+    title: line.goods.title,
+    sku: line.goods.sku,
+    spec: line.goods.spec,
+    quantity: line.need,
+    unit: line.goods.unit,
     operator: task.operator,
-    location: '',
-    remark: `生产报工 · ${task.id}`,
+    location: line.goods.location || '',
+    remark: pickRemark,
     taskId: task.id,
-    detailText: detailLines.join('\n'),
+    taskVersion: bom.version,
+    taskQty: amount,
     createdAt,
     time: formatRecordTime(createdAt)
-  }
+  }))
 
-  current.records.unshift(record)
+  current.records = records.concat(current.records)
+  trimRecords(current)
   persist()
 
   return {
     ok: true,
     task: decorateTask(task),
-    record: Object.assign({}, record),
+    // 兼容旧调用：record 为第一条领料记录
+    record: Object.assign({}, records[0]),
+    records: records.map((item) => Object.assign({}, item)),
+    recordCount: records.length,
     lines: lines.map((line) => ({
       title: line.goods.title,
       unit: line.goods.unit,
@@ -1766,6 +1906,8 @@ module.exports = {
   saveGoods,
   removeGoods,
   listRecords,
+  listRecentOps,
+  isPickRecord,
   addRecord,
   getOverview,
   getUser,

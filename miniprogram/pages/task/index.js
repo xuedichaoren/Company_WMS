@@ -482,7 +482,7 @@ Page({
 
     wx.showModal({
       title: `报工成功 · ${qty} 台`,
-      content: `单号：${result.record.id}\n已按 BOM 扣减物料：\n${lines.join('\n')}`,
+      content: `已扣减 ${result.recordCount} 种物料，每种物料单独一条领料记录（备注「生产任务领用」）：\n${lines.join('\n')}\n\n领料单号：${result.record.id} 起\n在「操作日志 → 领料」可逐条查看`,
       showCancel: false,
       confirmText: '知道了'
     })

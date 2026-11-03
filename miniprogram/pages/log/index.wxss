@@ -157,3 +157,19 @@
 .rec__qty--out {
   color: var(--color-warning);
 }
+
+/* 生产任务领料：用不同颜色与普通出库区分 */
+.rec__badge--pick {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+/* 备注行（生产任务领用等来源说明） */
+.rec__remark {
+  margin-top: 6rpx;
+  overflow: hidden;
+  font-size: 21rpx;
+  color: var(--color-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

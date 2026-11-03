@@ -15,6 +15,10 @@
         <text class="summary__value">{{summary.outbound}}</text>
         <text class="summary__label">出库单</text>
       </view>
+      <view class="summary__item">
+        <text class="summary__value">{{summary.pick}}</text>
+        <text class="summary__label">领料条</text>
+      </view>
     </view>
 
     <view class="type-tabs type-tabs--light">
@@ -50,23 +54,24 @@
           hover-class="rec--hover"
           bindtap="handleRecordTap"
         >
-          <view class="rec__badge rec__badge--{{item.type}}">{{item.typeText}}</view>
+          <view class="rec__badge rec__badge--{{item.taskId ? 'pick' : item.type}}">{{item.typeText}}</view>
 
           <view class="rec__main">
             <view class="rec__title">{{item.title}}</view>
             <view class="rec__meta">{{item.sku}} · {{item.spec}}</view>
             <view class="rec__meta">{{item.time}} · {{item.operator}} · {{item.location || '未设置库位'}}</view>
+            <view class="rec__remark" wx:if="{{item.remark}}">{{item.remark}}</view>
           </view>
 
           <view class="rec__qty rec__qty--{{item.type}}">
-            {{item.type === 'in' ? '+' : '-'}}{{item.quantity}}
+            {{item.type === 'in' ? '+' : '-'}}{{item.quantity}}{{item.unit}}
           </view>
         </view>
       </view>
     </view>
 
     <view wx:if="{{groups.length === 0}}" class="empty-state">
-      <text class="empty-state__text">暂无{{type === 'in' ? '入库' : (type === 'out' ? '出库' : '')}}记录</text>
+      <text class="empty-state__text">暂无{{type === 'in' ? '入库' : (type === 'out' ? '出库' : (type === 'pick' ? '领料' : ''))}}记录</text>
     </view>
   </view>
 

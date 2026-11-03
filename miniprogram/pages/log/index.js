@@ -10,8 +10,14 @@ const store = require('../../utils/store.js')
 const TYPE_TABS = [
   { key: 'all', label: '全部' },
   { key: 'in', label: '入库' },
-  { key: 'out', label: '出库' }
+  { key: 'out', label: '出库' },
+  { key: 'pick', label: '领料' }
 ]
+
+/** 生产任务领料：type 记为出库，靠 taskId 区分 */
+function isPick(record) {
+  return record.type === 'out' && !!record.taskId
+}
 
 /**
  * 按日期把记录分组
@@ -43,11 +49,17 @@ Page({
     summary: {
       total: 0,
       inbound: 0,
-      outbound: 0
+      outbound: 0,
+      pick: 0
     }
   },
 
-  onLoad() {
+  onLoad(options) {
+    // 支持从首页领料明细带参数进入，直接定位到对应筛选
+    const type = (options && options.type) || ''
+    if (type && TYPE_TABS.some((item) => item.key === type)) {
+      this.setData({ type })
+    }
     this.refresh()
   },
 
@@ -64,14 +76,26 @@ Page({
   /** 重新加载记录 */
   refresh() {
     const all = store.listRecords({})
-    const records = this.data.type === 'all' ? all : all.filter((item) => item.type === this.data.type)
+    const type = this.data.type
+    // 出库与领料分开统计，避免「领料」既算出库又算领料导致重复计数
+    const records = all.filter((item) => {
+      if (type === 'all') return true
+      if (type === 'pick') return isPick(item)
+      if (type === 'out') return item.type === 'out' && !isPick(item)
+      return item.type === type
+    })
+
+    const inbound = all.filter((item) => item.type === 'in').length
+    const pick = all.filter(isPick).length
+    const outbound = all.filter((item) => item.type === 'out').length - pick
 
     this.setData({
       groups: groupByDay(records),
       summary: {
         total: all.length,
-        inbound: all.filter((item) => item.type === 'in').length,
-        outbound: all.filter((item) => item.type === 'out').length
+        inbound,
+        outbound,
+        pick
       }
     })
   },
@@ -90,19 +114,23 @@ Page({
     const record = group.list[index]
     if (!record) return
 
+    const lines = [
+      `单号：${record.id}`,
+      `商品：${record.title}`,
+      `SKU：${record.sku}`,
+      `规格：${record.spec}`,
+      `数量：${record.quantity}${record.unit}`,
+      `库位：${record.location || '未设置'}`,
+      `操作人：${record.operator}`,
+      `时间：${record.time}`
+    ]
+    if (record.taskId) lines.push(`生产任务：${record.taskId}`)
+    if (record.detailText) lines.push('', '领用物料：', record.detailText)
+    lines.push(`备注：${record.remark || '无'}`)
+
     wx.showModal({
       title: `${record.typeText}详情`,
-      content: [
-        `单号：${record.id}`,
-        `商品：${record.title}`,
-        `SKU：${record.sku}`,
-        `规格：${record.spec}`,
-        `数量：${record.quantity}${record.unit}`,
-        `库位：${record.location || '未设置'}`,
-        `操作人：${record.operator}`,
-        `时间：${record.time}`,
-        `备注：${record.remark || '无'}`
-      ].join('\n'),
+      content: lines.join('\n'),
       showCancel: false,
       confirmText: '知道了'
     })

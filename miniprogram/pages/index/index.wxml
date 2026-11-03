@@ -127,32 +127,26 @@
       <view
         class="record"
         wx:for="{{records}}"
-        wx:key="id"
+        wx:key="key"
         hover-class="record--hover"
         data-index="{{index}}"
         bindtap="handleRecordTap"
       >
-        <!-- 入库 / 出库类型标识 -->
-        <view
-          class="record__badge {{item.type === 'in' ? 'record__badge--in' : 'record__badge--out'}}"
-        >
+        <!-- 入库 / 出库 / 领料 类型标识 -->
+        <view class="record__badge record__badge--{{item.kind}}">
           {{item.typeText}}
         </view>
 
         <!-- 商品与操作信息 -->
         <view class="record__main">
           <view class="record__title">{{item.title}}</view>
-          <view class="record__meta">{{item.sku}} · {{item.spec}}</view>
-          <view class="record__meta">
-            {{item.time}} · {{item.operator}} · {{item.location}}
-          </view>
+          <view class="record__meta">{{item.metaTop}}</view>
+          <view class="record__meta">{{item.metaBottom}}</view>
         </view>
 
-        <!-- 数量：入库显示 +，出库显示 - -->
-        <view
-          class="record__qty {{item.type === 'in' ? 'record__qty--in' : 'record__qty--out'}}"
-        >
-          {{item.type === 'in' ? '+' : '-'}}{{item.quantity}}
+        <!-- 入库显示 +，出库 / 领料显示 -；领料按物料种数展示 -->
+        <view class="record__qty record__qty--{{item.kind}}">
+          {{item.qtyText}}
         </view>
       </view>
 
@@ -163,4 +157,35 @@
 
   <!-- 底部安全区，适配 iPhone 等全面屏机型 -->
   <view class="safe-bottom"></view>
+</view>
+
+<!-- ==================== 领料明细弹层 ==================== -->
+<view class="mask" wx:if="{{showDetail}}" bindtap="closeDetail"></view>
+<view class="sheet" wx:if="{{showDetail}}" catchtap="noop">
+  <view class="sheet__head">
+    <text class="sheet__cancel" bindtap="closeDetail">关闭</text>
+    <text class="sheet__title">{{detail.title}}</text>
+    <text class="sheet__save" bindtap="goLog">日志</text>
+  </view>
+
+  <scroll-view class="sheet__body pick-body" scroll-y>
+    <view class="pick-rows">
+      <view class="pick-row" wx:for="{{detail.rows}}" wx:key="label">
+        <text class="pick-row__label">{{item.label}}</text>
+        <text class="pick-row__value">{{item.value}}</text>
+      </view>
+    </view>
+
+    <view class="pick-title">领用物料（{{detail.lines.length}} 种）</view>
+    <view class="pick-item" wx:for="{{detail.lines}}" wx:key="id">
+      <view class="pick-item__main">
+        <view class="pick-item__title">{{index + 1}}. {{item.title}}</view>
+        <view class="pick-item__meta">{{item.sku}} · {{item.spec}}</view>
+      </view>
+      <view class="pick-item__qty">-{{item.quantity}}{{item.unit}}</view>
+    </view>
+
+    <view class="pick-remark" wx:if="{{detail.remark}}">备注：{{detail.remark}}</view>
+    <view class="sheet__bottom"></view>
+  </scroll-view>
 </view>

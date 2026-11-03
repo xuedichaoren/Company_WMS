@@ -290,7 +290,7 @@
     </view>
 
     <view class="sheet__tips">
-      报工后按 BOM 自动扣减各物料库存，并生成一条「领料」出库记录；物料不足时会整单拒绝。
+      报工后按 BOM 自动扣减各物料库存，每种物料单独生成一条「领料」记录（备注「生产任务领用」）；物料不足时会整单拒绝。
     </view>
     <view class="sheet__bottom"></view>
   </view>
